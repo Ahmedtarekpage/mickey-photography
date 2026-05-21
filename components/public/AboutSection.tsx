@@ -4,11 +4,10 @@ import { useState } from "react";
 import { Play } from "lucide-react";
 import type { SiteSettings } from "@/lib/types";
 import { useMediaSrc } from "@/lib/useMediaSrc";
-import { VideoModal } from "@/components/ui/VideoModal";
 
 export function AboutSection({ settings }: { settings: SiteSettings }) {
   const reelSrc = useMediaSrc(settings.reelVideoUrl);
-  const [open, setOpen] = useState(false);
+  const [playing, setPlaying] = useState(false);
 
   return (
     <section
@@ -17,37 +16,53 @@ export function AboutSection({ settings }: { settings: SiteSettings }) {
     >
       {/* Reel (left) */}
       <div className="mx-auto w-full max-w-sm">
-        <button
-          onClick={() => reelSrc && setOpen(true)}
-          className="group relative block aspect-[9/16] w-full overflow-hidden rounded-3xl border border-white/10 bg-black shadow-3d"
-        >
-          {reelSrc ? (
+        <div className="group relative aspect-[9/16] w-full overflow-hidden rounded-3xl border border-white/10 bg-black shadow-3d">
+          {playing && reelSrc ? (
+            // Inline playback — full video, sound on, with controls.
             <video
-              key={reelSrc}
+              key={`play-${reelSrc}`}
               src={reelSrc}
               poster={settings.reelPoster || undefined}
               autoPlay
-              muted
-              loop
+              controls
               playsInline
-              className="h-full w-full object-cover"
-            />
-          ) : settings.reelPoster ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={settings.reelPoster}
-              alt="Reel"
-              className="h-full w-full object-cover"
+              className="h-full w-full bg-black object-contain"
             />
           ) : (
-            <div className="h-full w-full bg-ink-800" />
+            <>
+              {reelSrc ? (
+                <video
+                  key={reelSrc}
+                  src={reelSrc}
+                  poster={settings.reelPoster || undefined}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="h-full w-full object-cover"
+                />
+              ) : settings.reelPoster ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={settings.reelPoster}
+                  alt="Reel"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="h-full w-full bg-ink-800" />
+              )}
+              <button
+                onClick={() => reelSrc && setPlaying(true)}
+                aria-label="Play reel"
+                className="absolute inset-0 flex items-center justify-center bg-ink-950/20 transition group-hover:bg-ink-950/40"
+              >
+                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient text-white shadow-3d transition group-hover:scale-110">
+                  <Play className="h-7 w-7 translate-x-0.5 fill-current" />
+                </span>
+              </button>
+            </>
           )}
-          <div className="absolute inset-0 flex items-center justify-center bg-ink-950/20 transition group-hover:bg-ink-950/40">
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-gradient text-white shadow-3d transition group-hover:scale-110">
-              <Play className="h-7 w-7 translate-x-0.5 fill-current" />
-            </span>
-          </div>
-        </button>
+        </div>
       </div>
 
       {/* Brief (right) */}
@@ -62,14 +77,6 @@ export function AboutSection({ settings }: { settings: SiteSettings }) {
           {settings.brief}
         </p>
       </div>
-
-      <VideoModal
-        open={open}
-        src={settings.reelVideoUrl}
-        title={settings.siteName}
-        aspect="vertical"
-        onClose={() => setOpen(false)}
-      />
     </section>
   );
 }
