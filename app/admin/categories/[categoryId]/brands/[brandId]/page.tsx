@@ -1,0 +1,466 @@
+"use client";
+
+import { useState } from "react";
+import { useParams, notFound } from "next/navigation";
+import {
+  Images,
+  Film,
+  Plus,
+  Globe,
+  Star,
+  Pencil,
+  Clapperboard,
+  GalleryHorizontalEnd,
+  Video,
+} from "lucide-react";
+import { useStore, useBrand, useCategory } from "@/lib/store";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { VideoModal } from "@/components/ui/VideoModal";
+import { cn } from "@/lib/cn";
+import { BrandForm, type BrandDraft } from "@/components/admin/BrandForm";
+import { PhotoForm, type PhotoDraft } from "@/components/admin/PhotoForm";
+import { ReelForm, type ReelDraft } from "@/components/admin/ReelForm";
+import { PhotoGrid } from "@/components/admin/PhotoGrid";
+import { ReelGrid } from "@/components/admin/ReelGrid";
+import { deleteBlob } from "@/lib/mediaStore";
+import type { Photo, PhotoSection, Reel } from "@/lib/types";
+
+type Tab = "gallery" | "bts";
+type BtsTab = "reels" | "gallery";
+type PlayerState = { src: string; title: string; aspect: "vertical" | "wide" };
+
+export default function BrandDetailPage() {
+  const { categoryId, brandId } = useParams<{
+    categoryId: string;
+    brandId: string;
+  }>();
+  const store = useStore();
+  const brand = useBrand(brandId);
+  const category = useCategory(categoryId);
+
+  const medium = category?.medium ?? "photography";
+  const isVideo = medium === "videography";
+  const noun = isVideo ? "video" : "photo";
+
+  const [tab, setTab] = useState<Tab>("gallery");
+  const [btsTab, setBtsTab] = useState<BtsTab>("reels");
+
+  // Brand edit
+  const [brandFormOpen, setBrandFormOpen] = useState(false);
+
+  // Media (photo/video) state
+  const [photoFormOpen, setPhotoFormOpen] = useState(false);
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
+  const [newPhotoSection, setNewPhotoSection] = useState<PhotoSection>("gallery");
+  const [deletingPhoto, setDeletingPhoto] = useState<Photo | null>(null);
+
+  // Reel state
+  const [reelFormOpen, setReelFormOpen] = useState(false);
+  const [editingReel, setEditingReel] = useState<Reel | null>(null);
+  const [deletingReel, setDeletingReel] = useState<Reel | null>(null);
+
+  // Unified video player (reels + gallery videos)
+  const [player, setPlayer] = useState<PlayerState | null>(null);
+
+  if (store.ready && !brand) notFound();
+
+  const brandPhotos = store.photos.filter((p) => p.brandId === brandId);
+  const galleryPhotos = brandPhotos.filter((p) => p.section === "gallery");
+  const btsPhotos = brandPhotos.filter((p) => p.section === "bts");
+  const reels = store.reels.filter((r) => r.brandId === brandId);
+
+  // ---- handlers ----
+  const submitBrand = (draft: BrandDraft) => {
+    store.updateBrand(brandId, {
+      ...draft,
+      website: draft.website.trim() || undefined,
+      categoryId,
+    });
+    setBrandFormOpen(false);
+  };
+
+  const openAddPhoto = (section: PhotoSection) => {
+    setEditingPhoto(null);
+    setNewPhotoSection(section);
+    setPhotoFormOpen(true);
+  };
+  const openEditPhoto = (p: Photo) => {
+    setEditingPhoto(p);
+    setPhotoFormOpen(true);
+  };
+  const submitPhoto = (draft: PhotoDraft) => {
+    const payload = {
+      brandId,
+      section: editingPhoto ? editingPhoto.section : newPhotoSection,
+      title: draft.title,
+      orientation: draft.orientation,
+      url: draft.url,
+      videoUrl: isVideo ? draft.videoUrl.trim() || undefined : undefined,
+      durationSec:
+        isVideo && draft.durationSec ? Number(draft.durationSec) : undefined,
+      beforeUrl: !isVideo && draft.hasComparison ? draft.beforeUrl : undefined,
+      afterUrl: !isVideo && draft.hasComparison ? draft.afterUrl : undefined,
+    };
+    if (editingPhoto) store.updatePhoto(editingPhoto.id, payload);
+    else store.addPhoto(payload);
+    setPhotoFormOpen(false);
+  };
+
+  const playVideoItem = (p: Photo) =>
+    setPlayer({
+      src: p.videoUrl ?? "",
+      title: p.title,
+      aspect: p.orientation === "landscape" ? "wide" : "vertical",
+    });
+
+  const openAddReel = () => {
+    setEditingReel(null);
+    setReelFormOpen(true);
+  };
+  const submitReel = (draft: ReelDraft) => {
+    const payload = {
+      brandId,
+      title: draft.title,
+      videoUrl: draft.videoUrl,
+      thumbnail: draft.thumbnail,
+      durationSec: draft.durationSec ? Number(draft.durationSec) : undefined,
+    };
+    if (editingReel) store.updateReel(editingReel.id, payload);
+    else store.addReel(payload);
+    setReelFormOpen(false);
+  };
+
+  const topTabs: { id: Tab; label: string; icon: typeof Images; count: number }[] =
+    [
+      {
+        id: "gallery",
+        label: "Gallery",
+        icon: isVideo ? Video : Images,
+        count: galleryPhotos.length,
+      },
+      {
+        id: "bts",
+        label: "BTS",
+        icon: Clapperboard,
+        count: btsPhotos.length + reels.length,
+      },
+    ];
+
+  return (
+    <div>
+      <PageHeader
+        crumbs={[
+          { label: "Admin", href: "/admin" },
+          {
+            label: isVideo ? "Videography" : "Photography",
+            href: `/admin/categories?medium=${medium}`,
+          },
+          { label: category?.name ?? "…", href: `/admin/categories/${categoryId}` },
+          { label: brand?.name ?? "…" },
+        ]}
+        title={brand?.name ?? "Brand"}
+        description={brand?.description}
+      />
+
+      {/* Brand banner */}
+      {brand && (
+        <div className="surface-raised mb-8 flex flex-col items-center gap-5 rounded-3xl p-6 sm:flex-row sm:items-center">
+          <div className="relative shrink-0">
+            <div className="absolute -inset-1 rounded-full bg-brand-gradient opacity-70 blur-md" />
+            <div className="relative h-24 w-24 overflow-hidden rounded-full ring-2 ring-white/20 ring-offset-4 ring-offset-ink-850">
+              {brand.logo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={brand.logo}
+                  alt={brand.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-ink-700 text-3xl font-bold text-white">
+                  {brand.name.charAt(0)}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <h2 className="text-xl font-bold text-white">{brand.name}</h2>
+              <Badge tone={isVideo ? "amber" : "cyan"}>
+                {isVideo ? <Video className="h-3 w-3" /> : <Images className="h-3 w-3" />}
+                {isVideo ? "Videography" : "Photography"}
+              </Badge>
+              {brand.featured && (
+                <Badge tone="amber">
+                  <Star className="h-3 w-3 fill-current" /> Featured
+                </Badge>
+              )}
+            </div>
+            {brand.description && (
+              <p className="mt-1 text-sm text-slate-400">{brand.description}</p>
+            )}
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <Badge tone="violet">
+                <Images className="h-3 w-3" /> {galleryPhotos.length} gallery
+              </Badge>
+              <Badge tone="pink">
+                <GalleryHorizontalEnd className="h-3 w-3" /> {btsPhotos.length} BTS{" "}
+                {noun}s
+              </Badge>
+              <Badge tone="lime">
+                <Film className="h-3 w-3" /> {reels.length} reels
+              </Badge>
+              {brand.website && (
+                <a
+                  href={brand.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[11px] text-slate-300 transition hover:text-white"
+                >
+                  <Globe className="h-3 w-3" /> Visit site
+                </a>
+              )}
+            </div>
+          </div>
+          <Button variant="outline" onClick={() => setBrandFormOpen(true)}>
+            <Pencil className="h-4 w-4" /> Edit brand
+          </Button>
+        </div>
+      )}
+
+      {/* Top-level tabs */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+          {topTabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition",
+                tab === t.id
+                  ? "bg-brand-gradient text-white shadow-glow"
+                  : "text-slate-400 hover:text-white"
+              )}
+            >
+              <t.icon className="h-4 w-4" /> {t.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-xs",
+                  tab === t.id ? "bg-white/20" : "bg-white/10"
+                )}
+              >
+                {t.count}
+              </span>
+            </button>
+          ))}
+        </div>
+        {tab === "gallery" && (
+          <Button onClick={() => openAddPhoto("gallery")}>
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add {noun}</span>
+          </Button>
+        )}
+      </div>
+
+      {/* GALLERY TAB */}
+      {tab === "gallery" &&
+        (galleryPhotos.length === 0 ? (
+          <EmptyState
+            icon={isVideo ? Video : Images}
+            title={`No gallery ${noun}s yet`}
+            description={
+              isVideo
+                ? "Add finished portfolio videos — portrait or landscape."
+                : "Add finished portfolio shots — portrait or landscape."
+            }
+            action={
+              <Button onClick={() => openAddPhoto("gallery")}>
+                <Plus className="h-4 w-4" /> Add {noun}
+              </Button>
+            }
+          />
+        ) : (
+          <PhotoGrid
+            photos={galleryPhotos}
+            onEdit={openEditPhoto}
+            onDelete={setDeletingPhoto}
+            onPlay={playVideoItem}
+          />
+        ))}
+
+      {/* BTS TAB */}
+      {tab === "bts" && (
+        <div>
+          {/* BTS sub-tabs */}
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <div className="inline-flex rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+              {(
+                [
+                  { id: "reels", label: "Reels", icon: Film, count: reels.length },
+                  {
+                    id: "gallery",
+                    label: "Gallery",
+                    icon: GalleryHorizontalEnd,
+                    count: btsPhotos.length,
+                  },
+                ] as const
+              ).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setBtsTab(t.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition",
+                    btsTab === t.id
+                      ? "bg-brand-cyan/20 text-white shadow-glow-cyan"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  <t.icon className="h-4 w-4" /> {t.label}
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 text-xs",
+                      btsTab === t.id ? "bg-white/20" : "bg-white/10"
+                    )}
+                  >
+                    {t.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {btsTab === "reels" ? (
+              <Button onClick={openAddReel}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add reel</span>
+              </Button>
+            ) : (
+              <Button onClick={() => openAddPhoto("bts")}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add BTS {noun}</span>
+              </Button>
+            )}
+          </div>
+
+          {/* BTS → Reels */}
+          {btsTab === "reels" &&
+            (reels.length === 0 ? (
+              <EmptyState
+                icon={Film}
+                title="No BTS reels yet"
+                description="Add behind-the-scenes vertical videos for this brand."
+                action={
+                  <Button onClick={openAddReel}>
+                    <Plus className="h-4 w-4" /> Add reel
+                  </Button>
+                }
+              />
+            ) : (
+              <ReelGrid
+                reels={reels}
+                onEdit={(r) => {
+                  setEditingReel(r);
+                  setReelFormOpen(true);
+                }}
+                onDelete={setDeletingReel}
+                onPlay={(r) =>
+                  setPlayer({
+                    src: r.videoUrl,
+                    title: r.title,
+                    aspect: "vertical",
+                  })
+                }
+              />
+            ))}
+
+          {/* BTS → Gallery */}
+          {btsTab === "gallery" &&
+            (btsPhotos.length === 0 ? (
+              <EmptyState
+                icon={GalleryHorizontalEnd}
+                title={`No BTS ${noun}s yet`}
+                description={
+                  isVideo
+                    ? "Add behind-the-scenes video clips for this brand."
+                    : "Add behind-the-scenes images. Toggle on a before/after pair to get a draggable comparison slider."
+                }
+                action={
+                  <Button onClick={() => openAddPhoto("bts")}>
+                    <Plus className="h-4 w-4" /> Add BTS {noun}
+                  </Button>
+                }
+              />
+            ) : (
+              <PhotoGrid
+                photos={btsPhotos}
+                onEdit={openEditPhoto}
+                onDelete={setDeletingPhoto}
+                onPlay={playVideoItem}
+              />
+            ))}
+        </div>
+      )}
+
+      {/* Modals */}
+      <BrandForm
+        open={brandFormOpen}
+        onClose={() => setBrandFormOpen(false)}
+        onSubmit={submitBrand}
+        initial={brand}
+      />
+      <PhotoForm
+        open={photoFormOpen}
+        onClose={() => setPhotoFormOpen(false)}
+        onSubmit={submitPhoto}
+        initial={editingPhoto}
+        mode={isVideo ? "video" : "photo"}
+        allowComparison={
+          !isVideo &&
+          (editingPhoto ? editingPhoto.section === "bts" : newPhotoSection === "bts")
+        }
+      />
+      <ReelForm
+        open={reelFormOpen}
+        onClose={() => setReelFormOpen(false)}
+        onSubmit={submitReel}
+        initial={editingReel}
+      />
+
+      <ConfirmDialog
+        open={!!deletingPhoto}
+        title={`Delete ${noun}?`}
+        message={`"${deletingPhoto?.title}" will be permanently removed.`}
+        onConfirm={() => {
+          if (deletingPhoto) {
+            void deleteBlob(deletingPhoto.videoUrl);
+            store.deletePhoto(deletingPhoto.id);
+          }
+          setDeletingPhoto(null);
+        }}
+        onCancel={() => setDeletingPhoto(null)}
+      />
+      <ConfirmDialog
+        open={!!deletingReel}
+        title="Delete reel?"
+        message={`"${deletingReel?.title}" will be permanently removed.`}
+        onConfirm={() => {
+          if (deletingReel) {
+            void deleteBlob(deletingReel.videoUrl);
+            store.deleteReel(deletingReel.id);
+          }
+          setDeletingReel(null);
+        }}
+        onCancel={() => setDeletingReel(null)}
+      />
+
+      <VideoModal
+        open={!!player}
+        src={player?.src ?? ""}
+        title={player?.title ?? ""}
+        aspect={player?.aspect}
+        onClose={() => setPlayer(null)}
+      />
+    </div>
+  );
+}
