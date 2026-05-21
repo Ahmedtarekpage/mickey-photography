@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
   useCallback,
+  useRef,
 } from "react";
 import type {
   Brand,
@@ -20,7 +21,24 @@ import type {
 } from "./types";
 import { SEED } from "./seed";
 
-const STORAGE_KEY = "lumen-admin-data:v1";
+/** Backfill fields added after older documents were saved, so the shape stays valid. */
+function migrate(parsed: Partial<DataShape>): DataShape {
+  return {
+    settings: { ...SEED.settings, ...parsed.settings },
+    stats: parsed.stats ?? SEED.stats,
+    countries: parsed.countries ?? SEED.countries,
+    categories: (parsed.categories ?? []).map((c) => ({
+      ...c,
+      medium: c.medium ?? "photography",
+    })),
+    brands: parsed.brands ?? [],
+    photos: (parsed.photos ?? []).map((p) => ({
+      ...p,
+      section: p.section ?? (p.beforeUrl && p.afterUrl ? "bts" : "gallery"),
+    })),
+    reels: parsed.reels ?? [],
+  };
+}
 
 function uid(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}${Date.now()
@@ -80,46 +98,44 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<DataShape>(SEED);
   const [ready, setReady] = useState(false);
 
-  // Hydrate from localStorage once on mount.
+  // Load the shared content document from R2 (via the API) once on mount.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as DataShape;
-        setData({
-          // Backfill settings (and any newly added fields) for older saves.
-          settings: { ...SEED.settings, ...parsed.settings },
-          stats: parsed.stats ?? SEED.stats,
-          countries: parsed.countries ?? SEED.countries,
-          // Backfill `medium` for categories saved before the photo/video split.
-          categories: (parsed.categories ?? []).map((c) => ({
-            ...c,
-            medium: c.medium ?? "photography",
-          })),
-          brands: parsed.brands ?? [],
-          // Backfill `section` for photos saved before the gallery/BTS split:
-          // photos with a before/after pair belong in BTS, the rest in Gallery.
-          photos: (parsed.photos ?? []).map((p) => ({
-            ...p,
-            section: p.section ?? (p.beforeUrl && p.afterUrl ? "bts" : "gallery"),
-          })),
-          reels: parsed.reels ?? [],
-        });
-      }
-    } catch {
-      /* ignore corrupt storage, fall back to seed */
-    }
-    setReady(true);
+    let active = true;
+    fetch("/api/data")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((parsed: DataShape | null) => {
+        if (active && parsed) setData(migrate(parsed));
+      })
+      .catch(() => {
+        /* keep the seed already in state */
+      })
+      .finally(() => {
+        if (active) setReady(true);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
-  // Persist on every change (after hydration).
+  // Persist changes back to R2 (debounced). Skip the first run after load so we
+  // don't immediately re-write the document we just fetched.
+  const skipNextSave = useRef(true);
   useEffect(() => {
     if (!ready) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch {
-      /* storage quota — non-fatal for a prototype */
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
     }
+    const id = setTimeout(() => {
+      fetch("/api/data", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).catch(() => {
+        /* non-fatal — the next change will retry */
+      });
+    }, 700);
+    return () => clearTimeout(id);
   }, [data, ready]);
 
   const now = () => new Date().toISOString();

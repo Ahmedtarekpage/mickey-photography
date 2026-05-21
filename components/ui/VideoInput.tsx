@@ -3,8 +3,9 @@
 import { useRef, useState } from "react";
 import { Upload, Link2, Film, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { putBlob, isIdbRef } from "@/lib/mediaStore";
+import { isIdbRef } from "@/lib/mediaStore";
 import { useMediaSrc } from "@/lib/useMediaSrc";
+import { uploadFile, uploadDataUrl } from "@/lib/uploadMedia";
 
 export interface VideoMeta {
   poster?: string;
@@ -61,14 +62,24 @@ export function VideoInput({ value, onChange, onMeta }: VideoInputProps) {
   const [loading, setLoading] = useState(false);
   const resolved = useMediaSrc(value);
 
+  const [err, setErr] = useState("");
+
   const handleFile = async (file?: File) => {
     if (!file) return;
     setLoading(true);
+    setErr("");
     try {
       const meta = await extractMeta(file).catch(() => ({} as VideoMeta));
-      const ref = await putBlob(file);
-      onChange(ref);
-      if (onMeta) onMeta(meta);
+      // Upload the auto-extracted poster frame too, so it persists in R2.
+      let poster = meta.poster;
+      if (poster) {
+        poster = await uploadDataUrl(poster).catch(() => undefined);
+      }
+      const url = await uploadFile(file);
+      onChange(url);
+      if (onMeta) onMeta({ ...meta, poster });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setLoading(false);
     }
@@ -118,6 +129,8 @@ export function VideoInput({ value, onChange, onMeta }: VideoInputProps) {
           e.target.value = "";
         }}
       />
+
+      {err && <p className="text-center text-xs text-red-400">{err}</p>}
 
       <div className="relative">
         <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />

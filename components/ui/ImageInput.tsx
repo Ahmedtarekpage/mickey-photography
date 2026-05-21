@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Upload, Link2, ImageIcon, Loader2, Crop } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { uploadDataUrl } from "@/lib/uploadMedia";
 import { CropModal } from "./CropModal";
 
 interface ImageInputProps {
@@ -30,8 +31,9 @@ const aspectRatio: Record<string, number> = {
 
 /**
  * Lets the user provide an image by URL or by uploading a file. Circular images
- * are cropped on upload; rectangular images can be cropped after upload via the
- * Crop button. Uploaded files are read into a data URL (prototype-friendly).
+ * are cropped before upload; rectangular images can be re-cropped in the same
+ * session via the Crop button. Selected/cropped images are uploaded to R2 and
+ * the stored value is the resulting public URL (not a data URL).
  */
 export function ImageInput({
   value,
@@ -42,27 +44,46 @@ export function ImageInput({
 }: ImageInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  // The data URL of the current image, kept so it can be re-cropped this
+  // session (the saved value is a remote URL, which a canvas can't read).
+  const [localData, setLocalData] = useState<string | null>(null);
   const isCircle = shape === "circle";
   const cropShape = isCircle ? "round" : "rect";
   const cropAspect = isCircle ? 1 : aspectRatio[aspect];
 
-  // Only data: URLs are safe to crop on a canvas (remote URLs taint it).
-  const canCrop = value.startsWith("data:");
+  const canCrop = !!value && (value.startsWith("data:") || !!localData);
+
+  // Upload a data URL to R2 and store the returned public URL.
+  const commit = async (dataUrl: string) => {
+    setLoading(true);
+    setErr("");
+    try {
+      const url = await uploadDataUrl(dataUrl);
+      setLocalData(dataUrl);
+      onChange(url);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFile = (file?: File) => {
     if (!file) return;
-    setLoading(true);
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = String(reader.result);
-      setLoading(false);
       // Logos always go through the crop step; other images upload directly
-      // and can be cropped afterwards with the Crop button.
-      if (isCircle) setCropSrc(dataUrl);
-      else onChange(dataUrl);
+      // and can be re-cropped afterwards with the Crop button.
+      if (isCircle) {
+        setLocalData(dataUrl);
+        setCropSrc(dataUrl);
+      } else {
+        commit(dataUrl);
+      }
     };
-    reader.onerror = () => setLoading(false);
     reader.readAsDataURL(file);
   };
 
@@ -117,12 +138,14 @@ export function ImageInput({
         }}
       />
 
-      {/* Crop / re-crop the current image (only possible for uploaded images). */}
+      {err && <p className="text-center text-xs text-red-400">{err}</p>}
+
+      {/* Crop / re-crop the current image (only while we still hold its data). */}
       {canCrop && (
         <div className="flex justify-center">
           <button
             type="button"
-            onClick={() => setCropSrc(value)}
+            onClick={() => setCropSrc(localData ?? value)}
             className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
           >
             <Crop className="h-3.5 w-3.5" /> Crop image
@@ -137,7 +160,10 @@ export function ImageInput({
           placeholder={
             value.startsWith("data:") ? "Uploaded image" : "or paste image URL"
           }
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            setLocalData(null);
+            onChange(e.target.value);
+          }}
           className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-2 pl-9 pr-3 text-xs text-white placeholder:text-slate-500 outline-none transition focus:border-brand-fuchsia/50"
         />
       </div>
@@ -149,8 +175,8 @@ export function ImageInput({
         aspect={cropAspect}
         onCancel={() => setCropSrc(null)}
         onCropped={(dataUrl) => {
-          onChange(dataUrl);
           setCropSrc(null);
+          commit(dataUrl);
         }}
       />
     </div>
