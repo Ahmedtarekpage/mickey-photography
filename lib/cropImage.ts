@@ -17,8 +17,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 /**
  * Produces a circular logo from a source image and a square crop area.
- * The corners are made transparent so the result is a true circular asset.
- * Output is capped to `size`px to keep data URLs small for localStorage.
+ * The corners — and any area not covered by the image when zoomed out — are
+ * left transparent, so the result is a true circular asset. Output is capped
+ * to `size`px to keep data URLs small.
  */
 export async function getCroppedCircle(
   src: string,
@@ -26,29 +27,30 @@ export async function getCroppedCircle(
   size = 512
 ): Promise<string> {
   const image = await loadImage(src);
-  const target = Math.min(size, Math.round(area.width));
+  const target = Math.min(size, Math.max(1, Math.round(area.width)));
   const canvas = document.createElement("canvas");
   canvas.width = target;
   canvas.height = target;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas not supported");
 
-  // Clip to a circle, then draw the cropped square scaled to the canvas.
+  // Clip to a circle (the canvas starts fully transparent).
   ctx.beginPath();
   ctx.arc(target / 2, target / 2, target / 2, 0, Math.PI * 2);
   ctx.closePath();
   ctx.clip();
 
+  // Draw the WHOLE image, scaled and offset so the crop area maps onto the
+  // canvas. This works whether zoomed in (crop inside the image) or zoomed
+  // out (crop larger than the image — the gaps stay transparent), which the
+  // source-rectangle form of drawImage can't represent.
+  const scale = target / area.width;
   ctx.drawImage(
     image,
-    area.x,
-    area.y,
-    area.width,
-    area.height,
-    0,
-    0,
-    target,
-    target
+    -area.x * scale,
+    -area.y * scale,
+    image.width * scale,
+    image.height * scale
   );
 
   return canvas.toDataURL("image/png");

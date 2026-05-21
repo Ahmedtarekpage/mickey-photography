@@ -57,11 +57,11 @@ export default function SiteSettingsPage() {
         {/* Identity */}
         <section className="surface-raised space-y-5 rounded-3xl p-6">
           <h2 className="text-lg font-semibold text-white">Section 1 — Header</h2>
-          <Field label="Logo" hint="(full logo — shown as-is in the header)">
+          <Field label="Logo" hint="(cropped to a circle — drag & zoom to fit)">
             <ImageInput
               value={draft.logo}
               onChange={(v) => set("logo", v)}
-              aspect="video"
+              shape="circle"
             />
           </Field>
           <Field label="Website name">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Cropper from "react-easy-crop";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { Modal } from "./Modal";
@@ -39,6 +39,16 @@ export function CropModal({
   }, []);
 
   const isRound = shape === "round";
+  // Logos can zoom out (below 1) so the whole mark fits inside the circle with
+  // padding; that also needs free positioning. Photos stay edge-to-edge.
+  const minZoom = isRound ? 0.3 : 1;
+
+  // Start fresh whenever a new image is loaded into the cropper.
+  useEffect(() => {
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setArea(null);
+  }, [src]);
 
   const apply = async () => {
     if (!area) return;
@@ -60,7 +70,7 @@ export function CropModal({
       title={isRound ? "Crop logo" : "Crop image"}
       subtitle={
         isRound
-          ? "Drag to reposition, zoom to fit. The logo is cropped to a circle."
+          ? "Drag to reposition, zoom in or out to fit the whole logo. It’s cropped to a circle."
           : "Drag to reposition, zoom to fit the frame."
       }
       footer={
@@ -81,6 +91,9 @@ export function CropModal({
             crop={crop}
             zoom={zoom}
             aspect={aspect}
+            minZoom={minZoom}
+            maxZoom={3}
+            restrictPosition={!isRound}
             cropShape={isRound ? "round" : "rect"}
             showGrid={!isRound}
             onCropChange={setCrop}
@@ -92,7 +105,7 @@ export function CropModal({
           <ZoomOut className="h-4 w-4 shrink-0 text-slate-400" />
           <input
             type="range"
-            min={1}
+            min={minZoom}
             max={3}
             step={0.01}
             value={zoom}
