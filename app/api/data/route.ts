@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDataJson, putDataJson, r2Configured } from "@/lib/r2";
+import { getDataJson, putDataJson, sweepOrphans, r2Configured } from "@/lib/r2";
 import { isAdmin } from "@/lib/serverAuth";
 import { SEED } from "@/lib/seed";
 
@@ -38,11 +38,21 @@ export async function PUT(req: Request) {
     );
   }
   const body = await req.text();
+  let parsed: unknown;
   try {
-    JSON.parse(body); // reject anything that isn't valid JSON
+    parsed = JSON.parse(body); // reject anything that isn't valid JSON
   } catch {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
   await putDataJson(body);
-  return NextResponse.json({ ok: true });
+
+  // Prune media that's no longer referenced (best-effort — never fail the save).
+  let cleaned = 0;
+  try {
+    const { deleted } = await sweepOrphans(parsed);
+    cleaned = deleted.length;
+  } catch {
+    /* leave orphans for the next save */
+  }
+  return NextResponse.json({ ok: true, cleaned });
 }

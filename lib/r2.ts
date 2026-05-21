@@ -17,6 +17,8 @@ import {
   S3Client,
   GetObjectCommand,
   PutObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -115,3 +117,98 @@ const EXT: Record<string, string> = {
   "video/webm": "webm",
   "video/quicktime": "mov",
 };
+
+// Don't delete files uploaded within this window — they may belong to an edit
+// that hasn't been saved yet (e.g. a video uploaded while a form is open).
+const ORPHAN_GRACE_MS = 10 * 60 * 1000; // 10 minutes
+
+/** Extract a `media/...` object key from any URL that points at one (host-agnostic, query-stripped). */
+function urlToKey(url?: unknown): string | null {
+  if (typeof url !== "string") return null;
+  const i = url.indexOf("/media/");
+  if (i === -1) return null;
+  let key = url.slice(i + 1); // -> "media/...."
+  const q = key.indexOf("?");
+  if (q !== -1) key = key.slice(0, q);
+  return key;
+}
+
+/** Every media object key still referenced anywhere in the content document. */
+function collectReferencedKeys(data: unknown): Set<string> {
+  const d = (data ?? {}) as Record<string, unknown>;
+  const keys = new Set<string>();
+  const add = (u?: unknown) => {
+    const k = urlToKey(u);
+    if (k) keys.add(k);
+  };
+  const s = (d.settings ?? {}) as Record<string, unknown>;
+  add(s.logo);
+  add(s.reelVideoUrl);
+  add(s.reelPoster);
+  for (const c of (d.categories as Record<string, unknown>[]) ?? []) add(c.coverImage);
+  for (const b of (d.brands as Record<string, unknown>[]) ?? []) add(b.logo);
+  for (const p of (d.photos as Record<string, unknown>[]) ?? []) {
+    add(p.url);
+    add(p.videoUrl);
+    add(p.beforeUrl);
+    add(p.afterUrl);
+  }
+  for (const r of (d.reels as Record<string, unknown>[]) ?? []) {
+    add(r.videoUrl);
+    add(r.thumbnail);
+  }
+  return keys;
+}
+
+/** List every object under the media/ prefix (handles pagination). */
+async function listAllMedia(): Promise<{ key: string; modified: number }[]> {
+  const out: { key: string; modified: number }[] = [];
+  let token: string | undefined;
+  do {
+    const res = await r2().send(
+      new ListObjectsV2Command({
+        Bucket: R2_BUCKET,
+        Prefix: "media/",
+        ContinuationToken: token,
+      })
+    );
+    for (const o of res.Contents ?? []) {
+      if (o.Key) out.push({ key: o.Key, modified: o.LastModified?.getTime() ?? 0 });
+    }
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
+  return out;
+}
+
+/**
+ * Delete media objects that are no longer referenced by the content document.
+ * Returns the keys it removed. Non-referenced files newer than the grace
+ * window are left alone. Pass `dryRun` to compute deletions without removing.
+ */
+export async function sweepOrphans(
+  data: unknown,
+  { dryRun = false }: { dryRun?: boolean } = {}
+): Promise<{ deleted: string[]; kept: number }> {
+  if (!r2Configured()) return { deleted: [], kept: 0 };
+  const referenced = collectReferencedKeys(data);
+  const objects = await listAllMedia();
+  const cutoff = Date.now() - ORPHAN_GRACE_MS;
+
+  const orphans = objects
+    .filter((o) => !referenced.has(o.key) && o.modified < cutoff)
+    .map((o) => o.key);
+
+  if (orphans.length && !dryRun) {
+    for (let i = 0; i < orphans.length; i += 1000) {
+      const batch = orphans.slice(i, i + 1000);
+      await r2().send(
+        new DeleteObjectsCommand({
+          Bucket: R2_BUCKET,
+          Delete: { Objects: batch.map((Key) => ({ Key })), Quiet: true },
+        })
+      );
+    }
+  }
+
+  return { deleted: orphans, kept: objects.length - orphans.length };
+}
