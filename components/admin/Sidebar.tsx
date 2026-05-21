@@ -26,7 +26,7 @@ const nav = [
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { categories, brands, photos, reels } = useStore();
+  const { categories, brands, photos, reels, settings } = useStore();
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
@@ -39,12 +39,23 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         onClick={onNavigate}
         className="flex items-center gap-3 px-2"
       >
-        <div className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-gradient shadow-glow">
-          <Aperture className="h-6 w-6 text-white" />
+        <div className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-brand-gradient shadow-glow">
+          {settings.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={settings.logo}
+              alt={settings.siteName}
+              className="h-full w-full object-contain p-1.5"
+            />
+          ) : (
+            <Aperture className="h-6 w-6 text-white" />
+          )}
         </div>
-        <div>
-          <p className="text-base font-bold tracking-tight text-white">Lumen</p>
-          <p className="text-xs text-slate-400">3D Photography</p>
+        <div className="min-w-0">
+          <p className="truncate text-base font-bold tracking-tight text-white">
+            {settings.siteName || "Studio"}
+          </p>
+          <p className="text-xs text-slate-400">Studio admin</p>
         </div>
       </Link>
 
