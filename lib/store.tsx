@@ -67,6 +67,9 @@ interface StoreContextValue extends DataShape {
   addCategory: (c: NewCategory) => Category;
   updateCategory: (id: string, patch: Partial<NewCategory>) => void;
   deleteCategory: (id: string) => void;
+  /** Reorder the given categories (e.g. one medium's list) into `orderedIds`,
+   *  leaving any categories not in that set in their existing positions. */
+  reorderCategories: (orderedIds: string[]) => void;
   // Brands
   addBrand: (b: NewBrand) => Brand;
   updateBrand: (id: string, patch: Partial<NewBrand>) => void;
@@ -193,6 +196,20 @@ export function StoreProvider({
     });
   }, []);
 
+  const reorderCategories = useCallback((orderedIds: string[]) => {
+    setData((d) => {
+      const inSet = new Set(orderedIds);
+      const byId = new Map(d.categories.map((c) => [c.id, c]));
+      // Walk the full list; wherever a member of the reordered set sits, drop in
+      // the next id from `orderedIds`. Other categories keep their positions.
+      let i = 0;
+      const categories = d.categories.map((c) =>
+        inSet.has(c.id) ? byId.get(orderedIds[i++]) ?? c : c
+      );
+      return { ...d, categories };
+    });
+  }, []);
+
   // ---- Brands ----
   const addBrand = useCallback((b: NewBrand) => {
     const created: Brand = { ...b, id: uid("brand"), createdAt: now() };
@@ -303,6 +320,7 @@ export function StoreProvider({
       addCategory,
       updateCategory,
       deleteCategory,
+      reorderCategories,
       addBrand,
       updateBrand,
       deleteBrand,
@@ -326,6 +344,7 @@ export function StoreProvider({
       addCategory,
       updateCategory,
       deleteCategory,
+      reorderCategories,
       addBrand,
       updateBrand,
       deleteBrand,

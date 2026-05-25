@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Camera,
   Video,
+  GripVertical,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -27,14 +28,38 @@ function CategoriesInner() {
   const initialMedium: Medium =
     searchParams.get("medium") === "videography" ? "videography" : "photography";
 
-  const { categories, brands, addCategory, updateCategory, deleteCategory } =
-    useStore();
+  const {
+    categories,
+    brands,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    reorderCategories,
+  } = useStore();
   const [medium, setMedium] = useState<Medium>(initialMedium);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [deleting, setDeleting] = useState<Category | null>(null);
 
+  // Drag-and-drop reordering (native HTML5 DnD).
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  // A drag doesn't fire a click in HTML5 DnD, but guard navigation just in case
+  // a stray click follows a drop.
+  const dragEndedAt = useRef(0);
+
   const mediumCategories = categories.filter((c) => c.medium === medium);
+
+  const moveCategory = (targetId: string) => {
+    if (!dragId || dragId === targetId) return;
+    const ids = mediumCategories.map((c) => c.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    ids.splice(from, 1);
+    ids.splice(to, 0, dragId);
+    reorderCategories(ids);
+  };
 
   const mediums: {
     id: Medium;
@@ -128,20 +153,68 @@ function CategoriesInner() {
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-          {mediumCategories.map((c) => {
+        <>
+          {mediumCategories.length > 1 && (
+            <p className="mb-4 flex items-center gap-1.5 text-xs text-slate-500">
+              <GripVertical className="h-3.5 w-3.5" />
+              Drag cards to reorder — this is the order shown on your site.
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+            {mediumCategories.map((c) => {
             const brandCount = brands.filter((b) => b.categoryId === c.id).length;
             return (
               <Link
                 key={c.id}
                 href={`/admin/categories/${c.id}`}
-                className="card-3d group relative flex flex-col items-center p-6 text-center"
+                draggable
+                onDragStart={(e) => {
+                  setDragId(c.id);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", c.id);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (overId !== c.id) setOverId(c.id);
+                }}
+                onDragLeave={() => {
+                  if (overId === c.id) setOverId(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  moveCategory(c.id);
+                  setDragId(null);
+                  setOverId(null);
+                }}
+                onDragEnd={() => {
+                  setDragId(null);
+                  setOverId(null);
+                  dragEndedAt.current = Date.now();
+                }}
+                onClick={(e) => {
+                  // Suppress the navigation that may follow a drop.
+                  if (Date.now() - dragEndedAt.current < 120) e.preventDefault();
+                }}
+                className={cn(
+                  "card-3d group relative flex flex-col items-center p-6 text-center",
+                  "cursor-grab active:cursor-grabbing",
+                  dragId === c.id && "opacity-40",
+                  overId === c.id &&
+                    dragId !== c.id &&
+                    "ring-2 ring-brand-fuchsia ring-offset-2 ring-offset-ink-900"
+                )}
               >
                 <div className="absolute right-3 top-3">
                   <CardMenu
                     onEdit={() => openEdit(c)}
                     onDelete={() => setDeleting(c)}
                   />
+                </div>
+
+                {/* Drag affordance */}
+                <div className="absolute left-3 top-3 text-slate-500 opacity-0 transition group-hover:opacity-100">
+                  <GripVertical className="h-4 w-4" />
                 </div>
 
                 {/* Circular logo */}
@@ -196,7 +269,8 @@ function CategoriesInner() {
               </Link>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       <CategoryForm
