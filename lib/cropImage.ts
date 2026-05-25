@@ -5,6 +5,28 @@ export interface CropArea {
   height: number;
 }
 
+/**
+ * Fetch a remote image and return it as a data URL.
+ *
+ * Cropping draws the image to a canvas; if the image was first shown via a
+ * plain <img> (no CORS), the browser may serve the canvas a cached non-CORS
+ * copy and taint it. Fetching the bytes fresh with a CORS request and inlining
+ * them as a data URL sidesteps that — a data URL never taints the canvas.
+ * Pass-through for values that are already data URLs.
+ */
+export async function fetchAsDataUrl(url: string): Promise<string> {
+  if (url.startsWith("data:")) return url;
+  const res = await fetch(url, { mode: "cors", cache: "no-store" });
+  if (!res.ok) throw new Error(`Failed to load image (${res.status})`);
+  const blob = await res.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read image"));
+    reader.readAsDataURL(blob);
+  });
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const image = new Image();

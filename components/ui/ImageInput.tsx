@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Upload, Link2, ImageIcon, Loader2, Crop } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { uploadDataUrl } from "@/lib/uploadMedia";
+import { fetchAsDataUrl } from "@/lib/cropImage";
 import { CropModal } from "./CropModal";
 
 interface ImageInputProps {
@@ -67,6 +68,24 @@ export function ImageInput({
       onChange(url);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open the crop modal. Uploads use their local data URL; remote images are
+  // fetched fresh (CORS) and inlined so the crop canvas can't taint.
+  const openCrop = async () => {
+    if (localData) return setCropSrc(localData);
+    if (value.startsWith("data:")) return setCropSrc(value);
+    setLoading(true);
+    setErr("");
+    try {
+      const dataUrl = await fetchAsDataUrl(value);
+      setLocalData(dataUrl);
+      setCropSrc(dataUrl);
+    } catch {
+      setErr("Couldn't load this image for cropping. Try uploading the file.");
     } finally {
       setLoading(false);
     }
@@ -147,7 +166,7 @@ export function ImageInput({
         <div className="flex justify-center">
           <button
             type="button"
-            onClick={() => setCropSrc(localData ?? value)}
+            onClick={openCrop}
             className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
           >
             <Crop className="h-3.5 w-3.5" /> Crop image
