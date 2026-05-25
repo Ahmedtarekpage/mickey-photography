@@ -146,7 +146,10 @@ function collectReferencedKeys(data: unknown): Set<string> {
   add(s.reelVideoUrl);
   add(s.reelPoster);
   for (const c of (d.categories as Record<string, unknown>[]) ?? []) add(c.coverImage);
-  for (const b of (d.brands as Record<string, unknown>[]) ?? []) add(b.logo);
+  for (const b of (d.brands as Record<string, unknown>[]) ?? []) {
+    add(b.logo);
+    add(b.thumbnail);
+  }
   for (const p of (d.photos as Record<string, unknown>[]) ?? []) {
     add(p.url);
     add(p.videoUrl);

@@ -11,6 +11,7 @@ import type { Brand } from "@/lib/types";
 export type BrandDraft = {
   name: string;
   logo: string;
+  thumbnail: string;
   description: string;
   website: string;
   featured: boolean;
@@ -19,6 +20,7 @@ export type BrandDraft = {
 const empty: BrandDraft = {
   name: "",
   logo: "",
+  thumbnail: "",
   description: "",
   website: "",
   featured: false,
@@ -44,6 +46,7 @@ export function BrandForm({
           ? {
               name: initial.name,
               logo: initial.logo,
+              thumbnail: initial.thumbnail ?? "",
               description: initial.description,
               website: initial.website ?? "",
               featured: initial.featured,
@@ -81,6 +84,18 @@ export function BrandForm({
             value={draft.logo}
             onChange={(v) => set("logo", v)}
             shape="circle"
+          />
+        </Field>
+        <Field
+          label="Card thumbnail"
+          hint="(public work page — crop & zoom; falls back to a gallery photo)"
+        >
+          <ImageInput
+            value={draft.thumbnail}
+            onChange={(v) => set("thumbnail", v)}
+            shape="rect"
+            aspect="landscape"
+            label="Thumbnail"
           />
         </Field>
         <Field label="Brand name">

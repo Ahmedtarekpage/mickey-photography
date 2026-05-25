@@ -22,6 +22,9 @@ export interface Brand {
   categoryId: string;
   name: string;
   logo: string; // shown in a circular frame
+  /** Card image on the public work page. Falls back to a gallery photo, then
+   *  the logo, when unset. */
+  thumbnail?: string;
   description: string;
   website?: string;
   featured: boolean;

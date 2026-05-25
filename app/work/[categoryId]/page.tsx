@@ -82,9 +82,10 @@ export default function CategoryBrandsPage() {
               const brandPhotos = photos.filter((p) => p.brandId === b.id);
               const photoCount = brandPhotos.length;
               const reelCount = reels.filter((r) => r.brandId === b.id).length;
-              // Lead with a gallery image from this brand (videos use their
-              // poster); fall back to the brand logo, then nothing.
+              // Use the thumbnail set in admin; otherwise lead with a gallery
+              // image from this brand (videos use their poster), then the logo.
               const thumb =
+                b.thumbnail ||
                 brandPhotos.find((p) => p.section === "gallery")?.url ||
                 brandPhotos[0]?.url ||
                 b.logo ||

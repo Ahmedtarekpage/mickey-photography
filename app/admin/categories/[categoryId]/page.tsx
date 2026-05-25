@@ -48,6 +48,7 @@ export default function CategoryBrandsPage() {
     const payload = {
       ...draft,
       website: draft.website.trim() || undefined,
+      thumbnail: draft.thumbnail.trim() || undefined,
       categoryId,
     };
     if (editing) updateBrand(editing.id, payload);
