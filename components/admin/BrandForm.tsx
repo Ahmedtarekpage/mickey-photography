@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star } from "lucide-react";
+import { Star, Check } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { ImageInput } from "@/components/ui/ImageInput";
+import { useStore } from "@/lib/store";
+import { cn } from "@/lib/cn";
 import type { Brand } from "@/lib/types";
 
 export type BrandDraft = {
@@ -38,6 +40,12 @@ export function BrandForm({
   initial?: Brand | null;
 }) {
   const [draft, setDraft] = useState<BrandDraft>(empty);
+
+  // Photos already uploaded to this brand — offered as ready-made thumbnails.
+  const { photos } = useStore();
+  const brandPhotos = initial
+    ? photos.filter((p) => p.brandId === initial.id && p.url)
+    : [];
 
   useEffect(() => {
     if (open) {
@@ -88,7 +96,7 @@ export function BrandForm({
         </Field>
         <Field
           label="Card thumbnail"
-          hint="(public work page — crop & zoom; falls back to a gallery photo)"
+          hint="(public work page — upload & crop, or pick a brand photo below)"
         >
           <ImageInput
             value={draft.thumbnail}
@@ -97,6 +105,46 @@ export function BrandForm({
             aspect="landscape"
             label="Thumbnail"
           />
+
+          {brandPhotos.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-2 text-xs text-slate-400">
+                Or choose from this brand&apos;s photos
+              </p>
+              <div className="grid max-h-44 grid-cols-4 gap-2 overflow-y-auto pr-1 scroll-slim">
+                {brandPhotos.map((p) => {
+                  const selected = draft.thumbnail === p.url;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => set("thumbnail", selected ? "" : p.url)}
+                      className={cn(
+                        "group relative aspect-square overflow-hidden rounded-xl border transition",
+                        selected
+                          ? "border-brand-fuchsia ring-2 ring-brand-fuchsia"
+                          : "border-white/10 hover:border-white/30"
+                      )}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={p.url}
+                        alt={p.title || "Brand photo"}
+                        className="h-full w-full object-cover"
+                      />
+                      {selected && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-brand-fuchsia/25">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-fuchsia text-white">
+                            <Check className="h-4 w-4" />
+                          </span>
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </Field>
         <Field label="Brand name">
           <Input
