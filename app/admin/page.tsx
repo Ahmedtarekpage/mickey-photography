@@ -114,12 +114,13 @@ export default function OverviewPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {featured.map((b) => {
-                const cat = categories.find((c) => c.id === b.categoryId);
+                const primaryCategoryId = b.categoryIds[0];
+                const cat = categories.find((c) => c.id === primaryCategoryId);
                 const count = photos.filter((p) => p.brandId === b.id).length;
                 return (
                   <Link
                     key={b.id}
-                    href={`/admin/categories/${b.categoryId}/brands/${b.id}`}
+                    href={`/admin/categories/${primaryCategoryId}/brands/${b.id}`}
                     className="group flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition hover:border-brand-fuchsia/30 hover:bg-white/[0.06]"
                   >
                     <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full ring-2 ring-white/10 ring-offset-2 ring-offset-ink-900">
@@ -152,8 +153,8 @@ export default function OverviewPage() {
           </div>
           <div className="space-y-3">
             {categories.map((c) => {
-              const brandCount = brands.filter(
-                (b) => b.categoryId === c.id
+              const brandCount = brands.filter((b) =>
+                b.categoryIds.includes(c.id)
               ).length;
               return (
                 <Link

@@ -19,7 +19,9 @@ export interface Category {
 
 export interface Brand {
   id: string;
-  categoryId: string;
+  /** Categories this brand appears in. A brand can be linked into several
+   *  categories at once — it's one record shown in each. */
+  categoryIds: string[];
   name: string;
   logo: string; // shown in a circular frame
   /** Card image on the public work page. Falls back to a gallery photo, then

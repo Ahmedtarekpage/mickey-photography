@@ -10,7 +10,7 @@ const ITEM_W = 152;
 function BrandChip({ brand }: { brand: Brand }) {
   return (
     <Link
-      href={`/work/${brand.categoryId}/${brand.id}`}
+      href={`/work/${brand.categoryIds[0] ?? ""}/${brand.id}`}
       className="group mr-10 flex w-28 shrink-0 flex-col items-center gap-3"
     >
       <span className="relative">

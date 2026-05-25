@@ -11,21 +11,36 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { CardMenu } from "@/components/ui/CardMenu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { BrandForm, type BrandDraft } from "@/components/admin/BrandForm";
+import { CategoryPicker } from "@/components/admin/CategoryPicker";
 import type { Brand } from "@/lib/types";
 
 export default function CategoryBrandsPage() {
   const { categoryId } = useParams<{ categoryId: string }>();
-  const { brands, photos, reels, ready, addBrand, updateBrand, deleteBrand } =
-    useStore();
+  const {
+    brands,
+    photos,
+    reels,
+    ready,
+    addBrand,
+    updateBrand,
+    deleteBrand,
+    moveBrand,
+    linkBrandToCategory,
+    unlinkBrandFromCategory,
+  } = useStore();
   const category = useCategory(categoryId);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Brand | null>(null);
   const [deleting, setDeleting] = useState<Brand | null>(null);
+  // Move / add-to-category picker.
+  const [picker, setPicker] = useState<{ brand: Brand; mode: "move" | "link" } | null>(
+    null
+  );
 
   if (ready && !category) notFound();
 
-  const catBrands = brands.filter((b) => b.categoryId === categoryId);
+  const catBrands = brands.filter((b) => b.categoryIds.includes(categoryId));
 
   const openCreate = () => {
     setEditing(null);
@@ -40,10 +55,11 @@ export default function CategoryBrandsPage() {
       ...draft,
       website: draft.website.trim() || undefined,
       thumbnail: draft.thumbnail.trim() || undefined,
-      categoryId,
     };
+    // Editing leaves category membership untouched; creating drops the new
+    // brand into the current category.
     if (editing) updateBrand(editing.id, payload);
-    else addBrand(payload);
+    else addBrand({ ...payload, categoryIds: [categoryId] });
     setFormOpen(false);
   };
 
@@ -107,7 +123,12 @@ export default function CategoryBrandsPage() {
                 <div className="absolute right-3 top-3 z-10">
                   <CardMenu
                     onEdit={() => openEdit(b)}
+                    onMove={() => setPicker({ brand: b, mode: "move" })}
+                    onLink={() => setPicker({ brand: b, mode: "link" })}
                     onDelete={() => setDeleting(b)}
+                    deleteLabel={
+                      b.categoryIds.length > 1 ? "Remove from category" : "Delete"
+                    }
                   />
                 </div>
                 {b.featured && (
@@ -177,13 +198,46 @@ export default function CategoryBrandsPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title={`Delete "${deleting?.name}"?`}
-        message="This removes the brand and all of its photos and reels. This cannot be undone."
+        title={
+          deleting && deleting.categoryIds.length > 1
+            ? `Remove "${deleting.name}" from ${category?.name}?`
+            : `Delete "${deleting?.name}"?`
+        }
+        message={
+          deleting && deleting.categoryIds.length > 1
+            ? `It stays in ${deleting.categoryIds.length - 1} other categor${
+                deleting.categoryIds.length - 1 === 1 ? "y" : "ies"
+              }, with all of its photos and reels intact.`
+            : "This removes the brand and all of its photos and reels. This cannot be undone."
+        }
+        confirmLabel={
+          deleting && deleting.categoryIds.length > 1 ? "Remove" : "Delete"
+        }
         onConfirm={() => {
-          if (deleting) deleteBrand(deleting.id);
+          if (deleting) {
+            if (deleting.categoryIds.length > 1)
+              unlinkBrandFromCategory(deleting.id, categoryId);
+            else deleteBrand(deleting.id);
+          }
           setDeleting(null);
         }}
         onCancel={() => setDeleting(null)}
+      />
+
+      <CategoryPicker
+        open={!!picker}
+        mode={picker?.mode ?? "move"}
+        brandName={picker?.brand.name ?? ""}
+        currentIds={picker?.brand.categoryIds ?? []}
+        sourceCategoryId={categoryId}
+        onClose={() => setPicker(null)}
+        onPick={(targetId) => {
+          if (!picker) return;
+          if (picker.mode === "move")
+            moveBrand(picker.brand.id, categoryId, targetId);
+          else linkBrandToCategory(picker.brand.id, targetId);
+          setPicker(null);
+        }}
       />
     </div>
   );

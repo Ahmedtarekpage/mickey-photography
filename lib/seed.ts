@@ -115,7 +115,7 @@ export const SEED: DataShape = {
   brands: [
     {
       id: "brand-velocity",
-      categoryId: "cat-automotive",
+      categoryIds: ["cat-automotive"],
       name: "Velocity Motors",
       logo: img("velocity-logo", 240, 240),
       description: "Performance EV manufacturer — launch campaign 2026.",
@@ -125,7 +125,7 @@ export const SEED: DataShape = {
     },
     {
       id: "brand-aurora",
-      categoryId: "cat-automotive",
+      categoryIds: ["cat-automotive"],
       name: "Aurora Classics",
       logo: img("aurora-logo", 240, 240),
       description: "Restored vintage automobiles and concours builds.",
@@ -134,7 +134,7 @@ export const SEED: DataShape = {
     },
     {
       id: "brand-noir",
-      categoryId: "cat-fashion",
+      categoryIds: ["cat-fashion"],
       name: "Maison Noir",
       logo: img("noir-logo", 240, 240),
       description: "Avant-garde Paris label — FW26 lookbook.",
@@ -144,7 +144,7 @@ export const SEED: DataShape = {
     },
     {
       id: "brand-form",
-      categoryId: "cat-architecture",
+      categoryIds: ["cat-architecture"],
       name: "Form Studio",
       logo: img("form-logo", 240, 240),
       description: "Minimalist residential architecture practice.",
@@ -153,7 +153,7 @@ export const SEED: DataShape = {
     },
     {
       id: "brand-apex",
-      categoryId: "cat-commercials",
+      categoryIds: ["cat-commercials"],
       name: "Apex Films",
       logo: img("apex-logo", 240, 240),
       description: "Cinematic commercial production house.",

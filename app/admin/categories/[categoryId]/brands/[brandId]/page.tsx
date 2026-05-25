@@ -78,7 +78,7 @@ export default function BrandDetailPage() {
     store.updateBrand(brandId, {
       ...draft,
       website: draft.website.trim() || undefined,
-      categoryId,
+      thumbnail: draft.thumbnail.trim() || undefined,
     });
     setBrandFormOpen(false);
   };

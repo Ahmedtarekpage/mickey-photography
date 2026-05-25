@@ -23,7 +23,7 @@ export default function CategoryBrandsPage() {
   if (ready && !category) notFound();
 
   const isVideo = category?.medium === "videography";
-  const catBrands = brands.filter((b) => b.categoryId === categoryId);
+  const catBrands = brands.filter((b) => b.categoryIds.includes(categoryId));
 
   return (
     <div>

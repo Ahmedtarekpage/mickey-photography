@@ -31,7 +31,16 @@ function migrate(parsed: Partial<DataShape>): DataShape {
       ...c,
       medium: c.medium ?? "photography",
     })),
-    brands: parsed.brands ?? [],
+    brands: (parsed.brands ?? []).map((b) => {
+      // Older brands carried a single `categoryId`; normalize to `categoryIds`.
+      const legacy = b as Brand & { categoryId?: string };
+      const categoryIds = legacy.categoryIds?.length
+        ? legacy.categoryIds
+        : legacy.categoryId
+        ? [legacy.categoryId]
+        : [];
+      return { ...b, categoryIds };
+    }),
     photos: (parsed.photos ?? []).map((p) => ({
       ...p,
       section: p.section ?? (p.beforeUrl && p.afterUrl ? "bts" : "gallery"),
@@ -74,6 +83,12 @@ interface StoreContextValue extends DataShape {
   addBrand: (b: NewBrand) => Brand;
   updateBrand: (id: string, patch: Partial<NewBrand>) => void;
   deleteBrand: (id: string) => void;
+  /** Move a brand from one category to another. */
+  moveBrand: (id: string, fromCategoryId: string, toCategoryId: string) => void;
+  /** Link a brand into an additional category (same record, shown in both). */
+  linkBrandToCategory: (id: string, categoryId: string) => void;
+  /** Remove a brand from one category, keeping it in any others. */
+  unlinkBrandFromCategory: (id: string, categoryId: string) => void;
   // Photos
   addPhoto: (p: NewPhoto) => Photo;
   updatePhoto: (id: string, patch: Partial<NewPhoto>) => void;
@@ -185,13 +200,23 @@ export function StoreProvider({
 
   const deleteCategory = useCallback((id: string) => {
     setData((d) => {
-      const brandIds = d.brands.filter((b) => b.categoryId === id).map((b) => b.id);
+      // A brand linked only to this category is removed outright (with its
+      // media); a brand also in other categories is just unlinked from this one.
+      const removedBrandIds = d.brands
+        .filter((b) => b.categoryIds.includes(id) && b.categoryIds.length === 1)
+        .map((b) => b.id);
       return {
         ...d,
         categories: d.categories.filter((c) => c.id !== id),
-        brands: d.brands.filter((b) => b.categoryId !== id),
-        photos: d.photos.filter((p) => !brandIds.includes(p.brandId)),
-        reels: d.reels.filter((r) => !brandIds.includes(r.brandId)),
+        brands: d.brands
+          .filter((b) => !removedBrandIds.includes(b.id))
+          .map((b) =>
+            b.categoryIds.includes(id)
+              ? { ...b, categoryIds: b.categoryIds.filter((c) => c !== id) }
+              : b
+          ),
+        photos: d.photos.filter((p) => !removedBrandIds.includes(p.brandId)),
+        reels: d.reels.filter((r) => !removedBrandIds.includes(r.brandId)),
       };
     });
   }, []);
@@ -232,6 +257,56 @@ export function StoreProvider({
       reels: d.reels.filter((r) => r.brandId !== id),
     }));
   }, []);
+
+  // Move a brand from one category to another (drops the source, adds the target).
+  const moveBrand = useCallback(
+    (id: string, fromCategoryId: string, toCategoryId: string) => {
+      setData((d) => ({
+        ...d,
+        brands: d.brands.map((b) =>
+          b.id === id
+            ? {
+                ...b,
+                categoryIds: Array.from(
+                  new Set([
+                    ...b.categoryIds.filter((c) => c !== fromCategoryId),
+                    toCategoryId,
+                  ])
+                ),
+              }
+            : b
+        ),
+      }));
+    },
+    []
+  );
+
+  // Link an existing brand into another category (same record shown in both).
+  const linkBrandToCategory = useCallback((id: string, categoryId: string) => {
+    setData((d) => ({
+      ...d,
+      brands: d.brands.map((b) =>
+        b.id === id && !b.categoryIds.includes(categoryId)
+          ? { ...b, categoryIds: [...b.categoryIds, categoryId] }
+          : b
+      ),
+    }));
+  }, []);
+
+  // Remove a brand from one category only (keeps it in the others, media intact).
+  const unlinkBrandFromCategory = useCallback(
+    (id: string, categoryId: string) => {
+      setData((d) => ({
+        ...d,
+        brands: d.brands.map((b) =>
+          b.id === id
+            ? { ...b, categoryIds: b.categoryIds.filter((c) => c !== categoryId) }
+            : b
+        ),
+      }));
+    },
+    []
+  );
 
   // ---- Photos ----
   const addPhoto = useCallback((p: NewPhoto) => {
@@ -324,6 +399,9 @@ export function StoreProvider({
       addBrand,
       updateBrand,
       deleteBrand,
+      moveBrand,
+      linkBrandToCategory,
+      unlinkBrandFromCategory,
       addPhoto,
       updatePhoto,
       deletePhoto,
@@ -348,6 +426,9 @@ export function StoreProvider({
       addBrand,
       updateBrand,
       deleteBrand,
+      moveBrand,
+      linkBrandToCategory,
+      unlinkBrandFromCategory,
       addPhoto,
       updatePhoto,
       deletePhoto,

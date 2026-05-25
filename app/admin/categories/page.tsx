@@ -162,7 +162,9 @@ function CategoriesInner() {
           )}
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
             {mediumCategories.map((c) => {
-            const brandCount = brands.filter((b) => b.categoryId === c.id).length;
+            const brandCount = brands.filter((b) =>
+              b.categoryIds.includes(c.id)
+            ).length;
             return (
               <Link
                 key={c.id}

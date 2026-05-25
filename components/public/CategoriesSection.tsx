@@ -61,7 +61,7 @@ export function CategoriesSection() {
       ) : (
         <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
           {list.map((c) => {
-            const count = brands.filter((b) => b.categoryId === c.id).length;
+            const count = brands.filter((b) => b.categoryIds.includes(c.id)).length;
             return (
               <Link
                 key={c.id}
