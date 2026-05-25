@@ -94,12 +94,26 @@ interface StoreContextValue extends DataShape {
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [data, setData] = useState<DataShape>(SEED);
-  const [ready, setReady] = useState(false);
+export function StoreProvider({
+  children,
+  initialData = null,
+}: {
+  children: React.ReactNode;
+  /** Live content read on the server (see lib/serverData). When present, the
+   *  store hydrates with it directly so there's no flash of the seed. */
+  initialData?: Partial<DataShape> | null;
+}) {
+  const [data, setData] = useState<DataShape>(() =>
+    initialData ? migrate(initialData) : SEED
+  );
+  // When the server already provided the live data we're ready immediately;
+  // otherwise we wait for the client fetch below.
+  const [ready, setReady] = useState(Boolean(initialData));
 
-  // Load the shared content document from R2 (via the API) once on mount.
+  // Fall back to fetching the content document from R2 (via the API) on the
+  // client — only needed when the server didn't already provide it.
   useEffect(() => {
+    if (initialData) return; // already hydrated with live data on the server
     let active = true;
     fetch("/api/data")
       .then((r) => (r.ok ? r.json() : null))
@@ -115,7 +129,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialData]);
 
   // Persist changes back to R2 (debounced). Skip the first run after load so we
   // don't immediately re-write the document we just fetched.
