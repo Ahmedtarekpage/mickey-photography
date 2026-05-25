@@ -33,6 +33,7 @@ export function CropModal({
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<CropArea | null>(null);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   const onCropComplete = useCallback((_: unknown, px: CropArea) => {
     setArea(px);
@@ -48,16 +49,22 @@ export function CropModal({
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setArea(null);
+    setErr("");
   }, [src]);
 
   const apply = async () => {
     if (!area) return;
     setBusy(true);
+    setErr("");
     try {
       const out = isRound
         ? await getCroppedCircle(src, area)
         : await getCroppedRect(src, area);
       onCropped(out);
+    } catch {
+      setErr(
+        "Couldn't crop this image — it may block cross-origin access. Try uploading the file instead."
+      );
     } finally {
       setBusy(false);
     }
@@ -114,6 +121,7 @@ export function CropModal({
           />
           <ZoomIn className="h-4 w-4 shrink-0 text-slate-400" />
         </div>
+        {err && <p className="text-center text-xs text-red-400">{err}</p>}
       </div>
     </Modal>
   );

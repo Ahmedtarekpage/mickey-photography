@@ -53,7 +53,9 @@ export function ImageInput({
   const cropShape = isCircle ? "round" : "rect";
   const cropAspect = isCircle ? 1 : aspectRatio[aspect];
 
-  const canCrop = !!value && (value.startsWith("data:") || !!localData);
+  // Any selected image can be cropped — uploads use their local data URL,
+  // remote images (e.g. a picked brand photo) are loaded cross-origin.
+  const canCrop = !!value;
 
   // Upload a data URL to R2 and store the returned public URL.
   const commit = async (dataUrl: string) => {
