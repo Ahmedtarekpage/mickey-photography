@@ -79,17 +79,42 @@ export default function CategoryBrandsPage() {
         ) : (
           <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
             {catBrands.map((b) => {
-              const photoCount = photos.filter((p) => p.brandId === b.id).length;
+              const brandPhotos = photos.filter((p) => p.brandId === b.id);
+              const photoCount = brandPhotos.length;
               const reelCount = reels.filter((r) => r.brandId === b.id).length;
+              // Lead with a gallery image from this brand (videos use their
+              // poster); fall back to the brand logo, then nothing.
+              const thumb =
+                brandPhotos.find((p) => p.section === "gallery")?.url ||
+                brandPhotos[0]?.url ||
+                b.logo ||
+                "";
               return (
                 <Link
                   key={b.id}
                   href={`/work/${categoryId}/${b.id}`}
-                  className="card-3d group relative flex flex-col items-center p-6 text-center"
+                  className="card-3d group relative flex flex-col overflow-hidden"
                 >
-                  <div className="relative mb-4 mt-2">
-                    <div className="absolute -inset-1 rounded-full bg-brand-gradient opacity-50 blur-md transition group-hover:opacity-90" />
-                    <div className="relative h-24 w-24 overflow-hidden rounded-full ring-2 ring-white/15 ring-offset-4 ring-offset-ink-900 transition group-hover:ring-white/30">
+                  {/* Thumbnail from the brand's gallery */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-ink-800">
+                    {thumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={thumb}
+                        alt={b.name}
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-slate-600">
+                        <Images className="h-8 w-8" />
+                      </div>
+                    )}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-ink-950/70 to-transparent" />
+                  </div>
+
+                  {/* Footer: logo on the left, then name + counts */}
+                  <div className="flex items-center gap-3 p-4">
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-ink-700 ring-2 ring-white/15 transition group-hover:ring-white/30">
                       {b.logo ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -98,24 +123,26 @@ export default function CategoryBrandsPage() {
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-ink-700 text-2xl font-bold text-white">
+                        <div className="flex h-full w-full items-center justify-center text-sm font-bold text-white">
                           {b.name.charAt(0)}
                         </div>
                       )}
                     </div>
+                    <div className="min-w-0 flex-1 text-left">
+                      <h3 className="truncate font-semibold text-white">
+                        {b.name}
+                      </h3>
+                      <div className="mt-0.5 flex items-center gap-3 text-xs text-slate-400">
+                        <span className="flex items-center gap-1">
+                          <Images className="h-3 w-3" /> {photoCount}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Film className="h-3 w-3" /> {reelCount}
+                        </span>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-brand-fuchsia opacity-0 transition group-hover:opacity-100" />
                   </div>
-                  <h3 className="font-semibold text-white">{b.name}</h3>
-                  <div className="mt-2 flex items-center justify-center gap-3 text-xs text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <Images className="h-3 w-3" /> {photoCount}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Film className="h-3 w-3" /> {reelCount}
-                    </span>
-                  </div>
-                  <span className="mt-3 flex items-center gap-1 text-xs font-medium text-brand-fuchsia opacity-0 transition group-hover:opacity-100">
-                    View work <ArrowRight className="h-3 w-3" />
-                  </span>
                 </Link>
               );
             })}
