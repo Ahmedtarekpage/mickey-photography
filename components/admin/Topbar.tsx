@@ -1,15 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, RotateCcw, Search, Bell, LogOut } from "lucide-react";
+import { Menu, Search, Bell, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { useStore } from "@/lib/store";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
-  const { resetData } = useStore();
-  const [confirmReset, setConfirmReset] = useState(false);
-
   const logout = async () => {
     await fetch("/api/admin/logout", { method: "POST" });
     window.location.href = "/login";
@@ -36,15 +30,6 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setConfirmReset(true)}
-          title="Reset all data to the seed sample"
-        >
-          <RotateCcw className="h-4 w-4" />
-          <span className="hidden sm:inline">Reset data</span>
-        </Button>
         <Button variant="ghost" size="icon" aria-label="Notifications">
           <Bell className="h-5 w-5" />
         </Button>
@@ -61,18 +46,6 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           AT
         </div>
       </div>
-
-      <ConfirmDialog
-        open={confirmReset}
-        title="Reset all data?"
-        message="This restores the original sample categories, brands, photos and reels. Anything you added or edited in this browser will be lost."
-        confirmLabel="Reset"
-        onConfirm={() => {
-          resetData();
-          setConfirmReset(false);
-        }}
-        onCancel={() => setConfirmReset(false)}
-      />
     </header>
   );
 }
