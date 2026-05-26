@@ -119,6 +119,8 @@ export interface Country {
   /** ISO 3166-1 alpha-2 code, lowercase (e.g. "fr"). Drives the flag image. */
   code: string;
   name: string;
+  /** Brands worked with in this country — shown when its globe marker is clicked. */
+  brandIds?: string[];
   createdAt: string;
 }
 

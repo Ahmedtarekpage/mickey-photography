@@ -113,6 +113,7 @@ interface StoreContextValue extends DataShape {
   deleteStat: (id: string) => void;
   // Countries
   addCountry: (c: NewCountry) => Country;
+  updateCountry: (id: string, patch: Partial<NewCountry>) => void;
   deleteCountry: (id: string) => void;
   // Site settings
   updateSettings: (patch: Partial<SiteSettings>) => void;
@@ -227,6 +228,14 @@ export function StoreProvider({
           ),
         photos: d.photos.filter((p) => !removedBrandIds.includes(p.brandId)),
         reels: d.reels.filter((r) => !removedBrandIds.includes(r.brandId)),
+        countries: d.countries.map((c) =>
+          c.brandIds?.some((x) => removedBrandIds.includes(x))
+            ? {
+                ...c,
+                brandIds: c.brandIds.filter((x) => !removedBrandIds.includes(x)),
+              }
+            : c
+        ),
       };
     });
   }, []);
@@ -265,6 +274,11 @@ export function StoreProvider({
       brands: d.brands.filter((b) => b.id !== id),
       photos: d.photos.filter((p) => p.brandId !== id),
       reels: d.reels.filter((r) => r.brandId !== id),
+      countries: d.countries.map((c) =>
+        c.brandIds?.includes(id)
+          ? { ...c, brandIds: c.brandIds.filter((x) => x !== id) }
+          : c
+      ),
     }));
   }, []);
 
@@ -423,6 +437,13 @@ export function StoreProvider({
     return created;
   }, []);
 
+  const updateCountry = useCallback((id: string, patch: Partial<NewCountry>) => {
+    setData((d) => ({
+      ...d,
+      countries: d.countries.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+    }));
+  }, []);
+
   const deleteCountry = useCallback((id: string) => {
     setData((d) => ({
       ...d,
@@ -466,6 +487,7 @@ export function StoreProvider({
       updateStat,
       deleteStat,
       addCountry,
+      updateCountry,
       deleteCountry,
       updateSettings,
       resetData,
@@ -497,6 +519,7 @@ export function StoreProvider({
       updateStat,
       deleteStat,
       addCountry,
+      updateCountry,
       deleteCountry,
       updateSettings,
       resetData,

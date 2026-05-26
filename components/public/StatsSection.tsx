@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { StatIcon } from "@/lib/statIcons";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
-import type { Country, Stat } from "@/lib/types";
+import { CountryBrandsModal } from "@/components/public/CountryBrandsModal";
+import { BrandGalleryModal } from "@/components/public/BrandGalleryModal";
+import type { Brand, Country, Stat } from "@/lib/types";
 
 // Real WebGL globe — load only on the client.
 const EarthGlobe = dynamic(
@@ -58,6 +60,10 @@ export function StatsSection({
   stats: Stat[];
   countries: Country[];
 }) {
+  const [openCode, setOpenCode] = useState<string | null>(null);
+  const [galleryBrand, setGalleryBrand] = useState<Brand | null>(null);
+  const openCountry = countries.find((c) => c.code === openCode) ?? null;
+
   if (stats.length === 0 && countries.length === 0) return null;
 
   return (
@@ -100,18 +106,31 @@ export function StatsSection({
               {/* Isolated — if WebGL/three.js fails (old or low-memory devices),
                   the globe is dropped instead of blanking the page. */}
               <ErrorBoundary fallback={null}>
-                <EarthGlobe countries={countries} />
+                <EarthGlobe countries={countries} onSelect={setOpenCode} />
               </ErrorBoundary>
               <p className="mt-3 text-sm text-slate-400">
                 <span className="font-semibold text-white">
                   {countries.length}
                 </span>{" "}
-                countries · drag to spin, scroll to zoom
+                countries · drag to spin · tap a flag to see its brands
               </p>
             </div>
           )}
         </div>
       </div>
+
+      <CountryBrandsModal
+        country={openCountry}
+        onClose={() => setOpenCode(null)}
+        onSelectBrand={(b) => {
+          setOpenCode(null);
+          setGalleryBrand(b);
+        }}
+      />
+      <BrandGalleryModal
+        brand={galleryBrand}
+        onClose={() => setGalleryBrand(null)}
+      />
     </section>
   );
 }

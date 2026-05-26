@@ -11,11 +11,21 @@ type Marker = { lat: number; lng: number; code: string; name: string };
  * Interactive 3D earth (drag to rotate, scroll to zoom) with each country's
  * flag pinned at its real coordinates. Client-only — relies on WebGL.
  */
-export function EarthGlobe({ countries }: { countries: Country[] }) {
+export function EarthGlobe({
+  countries,
+  onSelect,
+}: {
+  countries: Country[];
+  /** Called with a country code when its marker is clicked. */
+  onSelect?: (code: string) => void;
+}) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const globeRef = useRef<any>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState(440);
+  // Hold the latest callback so the imperatively-built markers always call it.
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -64,6 +74,7 @@ export function EarthGlobe({ countries }: { countries: Country[] }) {
       el.style.transform = "translate(-50%,-50%) scale(1)";
       el.style.zIndex = "";
     };
+    el.onclick = () => onSelectRef.current?.(m.code);
     return el;
   };
 
