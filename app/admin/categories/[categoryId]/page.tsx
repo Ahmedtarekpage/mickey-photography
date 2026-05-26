@@ -1,9 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, notFound } from "next/navigation";
-import { Aperture, Plus, Star, Images, Film, ArrowRight } from "lucide-react";
+import {
+  Aperture,
+  Plus,
+  Star,
+  Images,
+  Film,
+  ArrowRight,
+  GripVertical,
+} from "lucide-react";
+import { cn } from "@/lib/cn";
 import { useStore, useCategory } from "@/lib/store";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -24,6 +33,7 @@ export default function CategoryBrandsPage() {
     addBrand,
     updateBrand,
     deleteBrand,
+    reorderBrands,
     moveBrand,
     linkBrandToCategory,
     unlinkBrandFromCategory,
@@ -37,10 +47,25 @@ export default function CategoryBrandsPage() {
   const [picker, setPicker] = useState<{ brand: Brand; mode: "move" | "link" } | null>(
     null
   );
+  // Drag-and-drop reordering (native HTML5 DnD).
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const dragEndedAt = useRef(0);
 
   if (ready && !category) notFound();
 
   const catBrands = brands.filter((b) => b.categoryIds.includes(categoryId));
+
+  const moveBrandOrder = (targetId: string) => {
+    if (!dragId || dragId === targetId) return;
+    const ids = catBrands.map((b) => b.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    ids.splice(from, 1);
+    ids.splice(to, 0, dragId);
+    reorderBrands(ids);
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -102,8 +127,15 @@ export default function CategoryBrandsPage() {
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-          {catBrands.map((b) => {
+        <>
+          {catBrands.length > 1 && (
+            <p className="mb-4 flex items-center gap-1.5 text-xs text-slate-500">
+              <GripVertical className="h-3.5 w-3.5" />
+              Drag cards to reorder — this sets the order shown on your site.
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+            {catBrands.map((b) => {
             const brandPhotos = photos.filter((p) => p.brandId === b.id);
             const photoCount = brandPhotos.length;
             const reelCount = reels.filter((r) => r.brandId === b.id).length;
@@ -118,7 +150,43 @@ export default function CategoryBrandsPage() {
               <Link
                 key={b.id}
                 href={`/admin/categories/${categoryId}/brands/${b.id}`}
-                className="card-3d group relative flex flex-col overflow-hidden"
+                draggable
+                onDragStart={(e) => {
+                  setDragId(b.id);
+                  e.dataTransfer.effectAllowed = "move";
+                  e.dataTransfer.setData("text/plain", b.id);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                  if (overId !== b.id) setOverId(b.id);
+                }}
+                onDragLeave={() => {
+                  if (overId === b.id) setOverId(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  moveBrandOrder(b.id);
+                  setDragId(null);
+                  setOverId(null);
+                }}
+                onDragEnd={() => {
+                  setDragId(null);
+                  setOverId(null);
+                  dragEndedAt.current = Date.now();
+                }}
+                onClick={(e) => {
+                  // Suppress the navigation that may follow a drop.
+                  if (Date.now() - dragEndedAt.current < 120) e.preventDefault();
+                }}
+                className={cn(
+                  "card-3d group relative flex flex-col overflow-hidden",
+                  "cursor-grab active:cursor-grabbing",
+                  dragId === b.id && "opacity-40",
+                  overId === b.id &&
+                    dragId !== b.id &&
+                    "ring-2 ring-brand-fuchsia ring-offset-2 ring-offset-ink-900"
+                )}
               >
                 <div className="absolute right-3 top-3 z-10">
                   <CardMenu
@@ -144,6 +212,7 @@ export default function CategoryBrandsPage() {
                     <img
                       src={thumb}
                       alt={b.name}
+                      draggable={false}
                       className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                     />
                   ) : (
@@ -162,6 +231,7 @@ export default function CategoryBrandsPage() {
                       <img
                         src={b.logo}
                         alt={b.name}
+                        draggable={false}
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -186,7 +256,8 @@ export default function CategoryBrandsPage() {
               </Link>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       <BrandForm

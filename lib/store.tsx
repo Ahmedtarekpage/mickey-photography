@@ -83,6 +83,9 @@ interface StoreContextValue extends DataShape {
   addBrand: (b: NewBrand) => Brand;
   updateBrand: (id: string, patch: Partial<NewBrand>) => void;
   deleteBrand: (id: string) => void;
+  /** Reorder the given brands (e.g. one category's list) into `orderedIds`,
+   *  leaving any brands not in that set in their existing positions. */
+  reorderBrands: (orderedIds: string[]) => void;
   /** Move a brand from one category to another. */
   moveBrand: (id: string, fromCategoryId: string, toCategoryId: string) => void;
   /** Link a brand into an additional category (same record, shown in both). */
@@ -258,6 +261,20 @@ export function StoreProvider({
     }));
   }, []);
 
+  const reorderBrands = useCallback((orderedIds: string[]) => {
+    setData((d) => {
+      const inSet = new Set(orderedIds);
+      const byId = new Map(d.brands.map((b) => [b.id, b]));
+      // Same approach as reorderCategories: slot the reordered set into the
+      // positions it already occupied; other brands keep their place.
+      let i = 0;
+      const brands = d.brands.map((b) =>
+        inSet.has(b.id) ? byId.get(orderedIds[i++]) ?? b : b
+      );
+      return { ...d, brands };
+    });
+  }, []);
+
   // Move a brand from one category to another (drops the source, adds the target).
   const moveBrand = useCallback(
     (id: string, fromCategoryId: string, toCategoryId: string) => {
@@ -399,6 +416,7 @@ export function StoreProvider({
       addBrand,
       updateBrand,
       deleteBrand,
+      reorderBrands,
       moveBrand,
       linkBrandToCategory,
       unlinkBrandFromCategory,
@@ -426,6 +444,7 @@ export function StoreProvider({
       addBrand,
       updateBrand,
       deleteBrand,
+      reorderBrands,
       moveBrand,
       linkBrandToCategory,
       unlinkBrandFromCategory,
