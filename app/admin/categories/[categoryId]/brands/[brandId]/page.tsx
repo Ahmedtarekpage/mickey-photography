@@ -14,7 +14,6 @@ import {
   Video,
   Upload,
 } from "lucide-react";
-import { uploadFile } from "@/lib/uploadMedia";
 import { useStore, useBrand, useCategory } from "@/lib/store";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -29,34 +28,13 @@ import { ReelForm, type ReelDraft } from "@/components/admin/ReelForm";
 import { PhotoGrid } from "@/components/admin/PhotoGrid";
 import { ReelGrid } from "@/components/admin/ReelGrid";
 import { ArrangeMenu } from "@/components/admin/ArrangeMenu";
+import { BulkPhotoWizard, type BulkItem } from "@/components/admin/BulkPhotoWizard";
 import { deleteBlob } from "@/lib/mediaStore";
-import type { Orientation, Photo, PhotoSection, Reel } from "@/lib/types";
+import type { Photo, PhotoSection, Reel } from "@/lib/types";
 
 type Tab = "gallery" | "bts";
 type BtsTab = "reels" | "gallery";
 type PlayerState = { src: string; title: string; aspect: "vertical" | "wide" };
-
-/** "name.JPG" -> "name" — the photo name used for the SEO alt text. */
-function nameFromFile(fileName: string): string {
-  return fileName.replace(/\.[^.]+$/, "").trim() || fileName;
-}
-
-/** Detect orientation from an image file's dimensions (defaults to landscape). */
-function detectOrientation(file: File): Promise<Orientation> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img.naturalWidth >= img.naturalHeight ? "landscape" : "portrait");
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve("landscape");
-    };
-    img.src = url;
-  });
-}
 
 export default function BrandDetailPage() {
   const { categoryId, brandId } = useParams<{
@@ -83,10 +61,12 @@ export default function BrandDetailPage() {
   const [newPhotoSection, setNewPhotoSection] = useState<PhotoSection>("gallery");
   const [deletingPhoto, setDeletingPhoto] = useState<Photo | null>(null);
 
-  // Bulk image upload (select many from the computer at once).
+  // Bulk image upload — select many files, then a wizard steps through each.
   const bulkInputRef = useRef<HTMLInputElement>(null);
   const bulkSectionRef = useRef<PhotoSection>("gallery");
-  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulk, setBulk] = useState<{ files: File[]; section: PhotoSection } | null>(
+    null
+  );
 
   // Reel state
   const [reelFormOpen, setReelFormOpen] = useState(false);
@@ -119,47 +99,26 @@ export default function BrandDetailPage() {
     setPhotoFormOpen(true);
   };
 
-  // Open the file picker for a bulk upload into the given section.
+  // Open the file picker; selecting files opens the step-through wizard.
   const openBulkUpload = (section: PhotoSection) => {
     bulkSectionRef.current = section;
     bulkInputRef.current?.click();
   };
-  // Upload every selected file to R2, name each from its filename (kept for SEO,
-  // hidden as a caption by default), then add them in the order they were picked.
-  const handleBulkFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setBulkBusy(true);
-    try {
-      const section = bulkSectionRef.current;
-      const results = await Promise.allSettled(
-        Array.from(files).map(async (file) => {
-          const [url, orientation] = await Promise.all([
-            uploadFile(file),
-            detectOrientation(file),
-          ]);
-          return { url, orientation, title: nameFromFile(file.name) };
-        })
-      );
-      const ready = results
-        .filter(
-          (r): r is PromiseFulfilledResult<{ url: string; orientation: Orientation; title: string }> =>
-            r.status === "fulfilled"
-        )
-        .map((r) => r.value);
-      // addPhoto prepends, so add in reverse to keep the picked order at the top.
-      for (let i = ready.length - 1; i >= 0; i--) {
-        store.addPhoto({
-          brandId,
-          section,
-          title: ready[i].title,
-          showName: false,
-          orientation: ready[i].orientation,
-          url: ready[i].url,
-        });
-      }
-    } finally {
-      setBulkBusy(false);
+  // Commit the wizard's photos (in picked order) into the chosen section.
+  const saveBulk = (photos: BulkItem[]) => {
+    const section = bulk?.section ?? "gallery";
+    // addPhoto prepends, so add in reverse to keep the picked order at the top.
+    for (let i = photos.length - 1; i >= 0; i--) {
+      store.addPhoto({
+        brandId,
+        section,
+        title: photos[i].title,
+        showName: photos[i].showName,
+        orientation: photos[i].orientation,
+        url: photos[i].url,
+      });
     }
+    setBulk(null);
   };
   const openEditPhoto = (p: Photo) => {
     setEditingPhoto(p);
@@ -345,7 +304,7 @@ export default function BrandDetailPage() {
                 <span className="hidden sm:inline">Add {noun}</span>
               </Button>
             ) : (
-              <Button loading={bulkBusy} onClick={() => openBulkUpload("gallery")}>
+              <Button onClick={() => openBulkUpload("gallery")}>
                 <Upload className="h-4 w-4" />
                 <span className="hidden sm:inline">Upload images</span>
               </Button>
@@ -371,7 +330,7 @@ export default function BrandDetailPage() {
                   <Plus className="h-4 w-4" /> Add {noun}
                 </Button>
               ) : (
-                <Button loading={bulkBusy} onClick={() => openBulkUpload("gallery")}>
+                <Button onClick={() => openBulkUpload("gallery")}>
                   <Upload className="h-4 w-4" /> Upload images
                 </Button>
               )
@@ -448,7 +407,7 @@ export default function BrandDetailPage() {
                     <span className="hidden sm:inline">Add BTS {noun}</span>
                   </Button>
                 ) : (
-                  <Button loading={bulkBusy} onClick={() => openBulkUpload("bts")}>
+                  <Button onClick={() => openBulkUpload("bts")}>
                     <Upload className="h-4 w-4" />
                     <span className="hidden sm:inline">Upload images</span>
                   </Button>
@@ -505,7 +464,7 @@ export default function BrandDetailPage() {
                       <Plus className="h-4 w-4" /> Add BTS {noun}
                     </Button>
                   ) : (
-                    <Button loading={bulkBusy} onClick={() => openBulkUpload("bts")}>
+                    <Button onClick={() => openBulkUpload("bts")}>
                       <Upload className="h-4 w-4" /> Upload images
                     </Button>
                   )
@@ -534,9 +493,17 @@ export default function BrandDetailPage() {
         multiple
         className="hidden"
         onChange={(e) => {
-          handleBulkFiles(e.target.files);
+          const files = e.target.files ? Array.from(e.target.files) : [];
+          if (files.length) setBulk({ files, section: bulkSectionRef.current });
           e.target.value = ""; // allow re-selecting the same files
         }}
+      />
+
+      <BulkPhotoWizard
+        open={!!bulk}
+        files={bulk?.files ?? []}
+        onClose={() => setBulk(null)}
+        onSave={saveBulk}
       />
 
       {/* Modals */}
