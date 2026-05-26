@@ -339,20 +339,17 @@ export default function BrandDetailPage() {
                 onReorder={store.reorderPhotos}
               />
             )}
-            {!isVideo && (
-              <Button
-                variant="outline"
-                loading={bulkBusy}
-                onClick={() => openBulkUpload("gallery")}
-              >
+            {isVideo ? (
+              <Button onClick={() => openAddPhoto("gallery")}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Add {noun}</span>
+              </Button>
+            ) : (
+              <Button loading={bulkBusy} onClick={() => openBulkUpload("gallery")}>
                 <Upload className="h-4 w-4" />
                 <span className="hidden sm:inline">Upload images</span>
               </Button>
             )}
-            <Button onClick={() => openAddPhoto("gallery")}>
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Add {noun}</span>
-            </Button>
           </div>
         )}
       </div>
@@ -369,9 +366,15 @@ export default function BrandDetailPage() {
                 : "Add finished portfolio shots — portrait or landscape."
             }
             action={
-              <Button onClick={() => openAddPhoto("gallery")}>
-                <Plus className="h-4 w-4" /> Add {noun}
-              </Button>
+              isVideo ? (
+                <Button onClick={() => openAddPhoto("gallery")}>
+                  <Plus className="h-4 w-4" /> Add {noun}
+                </Button>
+              ) : (
+                <Button loading={bulkBusy} onClick={() => openBulkUpload("gallery")}>
+                  <Upload className="h-4 w-4" /> Upload images
+                </Button>
+              )
             }
           />
         ) : (
@@ -439,20 +442,17 @@ export default function BrandDetailPage() {
                     onReorder={store.reorderPhotos}
                   />
                 )}
-                {!isVideo && (
-                  <Button
-                    variant="outline"
-                    loading={bulkBusy}
-                    onClick={() => openBulkUpload("bts")}
-                  >
+                {isVideo ? (
+                  <Button onClick={() => openAddPhoto("bts")}>
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Add BTS {noun}</span>
+                  </Button>
+                ) : (
+                  <Button loading={bulkBusy} onClick={() => openBulkUpload("bts")}>
                     <Upload className="h-4 w-4" />
                     <span className="hidden sm:inline">Upload images</span>
                   </Button>
                 )}
-                <Button onClick={() => openAddPhoto("bts")}>
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Add BTS {noun}</span>
-                </Button>
               </div>
             )}
           </div>
@@ -497,12 +497,18 @@ export default function BrandDetailPage() {
                 description={
                   isVideo
                     ? "Add behind-the-scenes video clips for this brand."
-                    : "Add behind-the-scenes images. Toggle on a before/after pair to get a draggable comparison slider."
+                    : "Upload behind-the-scenes images. Edit one afterwards to turn it into a before/after comparison slider."
                 }
                 action={
-                  <Button onClick={() => openAddPhoto("bts")}>
-                    <Plus className="h-4 w-4" /> Add BTS {noun}
-                  </Button>
+                  isVideo ? (
+                    <Button onClick={() => openAddPhoto("bts")}>
+                      <Plus className="h-4 w-4" /> Add BTS {noun}
+                    </Button>
+                  ) : (
+                    <Button loading={bulkBusy} onClick={() => openBulkUpload("bts")}>
+                      <Upload className="h-4 w-4" /> Upload images
+                    </Button>
+                  )
                 }
               />
             ) : (
