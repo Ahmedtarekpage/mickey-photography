@@ -5,8 +5,7 @@ import dynamic from "next/dynamic";
 import { StatIcon } from "@/lib/statIcons";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { CountryBrandsModal } from "@/components/public/CountryBrandsModal";
-import { BrandGalleryModal } from "@/components/public/BrandGalleryModal";
-import type { Brand, Country, Stat } from "@/lib/types";
+import type { Country, Stat } from "@/lib/types";
 
 // Real WebGL globe — load only on the client.
 const EarthGlobe = dynamic(
@@ -61,7 +60,6 @@ export function StatsSection({
   countries: Country[];
 }) {
   const [openCode, setOpenCode] = useState<string | null>(null);
-  const [galleryBrand, setGalleryBrand] = useState<Brand | null>(null);
   const openCountry = countries.find((c) => c.code === openCode) ?? null;
 
   if (stats.length === 0 && countries.length === 0) return null;
@@ -122,14 +120,6 @@ export function StatsSection({
       <CountryBrandsModal
         country={openCountry}
         onClose={() => setOpenCode(null)}
-        onSelectBrand={(b) => {
-          setOpenCode(null);
-          setGalleryBrand(b);
-        }}
-      />
-      <BrandGalleryModal
-        brand={galleryBrand}
-        onClose={() => setGalleryBrand(null)}
       />
     </section>
   );

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { X, ArrowRight } from "lucide-react";
 import { flagUrl } from "@/lib/countries";
 import { useStore } from "@/lib/store";
@@ -9,16 +10,14 @@ import type { Brand, Country } from "@/lib/types";
 
 /**
  * Shown when a country marker on the globe is clicked: its brands, so visitors
- * can pick one. Selecting a brand bubbles up (the page opens its gallery).
+ * can pick one. Each brand links to its work page.
  */
 export function CountryBrandsModal({
   country,
   onClose,
-  onSelectBrand,
 }: {
   country: Country | null;
   onClose: () => void;
-  onSelectBrand: (brand: Brand) => void;
 }) {
   const { brands } = useStore();
 
@@ -80,9 +79,10 @@ export function CountryBrandsModal({
           ) : (
             <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {list.map((b) => (
-                <button
+                <Link
                   key={b.id}
-                  onClick={() => onSelectBrand(b)}
+                  href={`/work/${b.categoryIds[0] ?? ""}/${b.id}`}
+                  onClick={onClose}
                   className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left transition hover:border-brand-fuchsia/40 hover:bg-white/[0.06]"
                 >
                   <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-ink-700 ring-2 ring-white/10">
@@ -103,7 +103,7 @@ export function CountryBrandsModal({
                     {b.name}
                   </span>
                   <ArrowRight className="h-4 w-4 shrink-0 text-brand-fuchsia opacity-0 transition group-hover:opacity-100" />
-                </button>
+                </Link>
               ))}
             </div>
           )}
