@@ -12,7 +12,6 @@ import {
   Film,
   Clapperboard,
   Play,
-  Clock,
   SlidersHorizontal,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -20,67 +19,56 @@ import { cn } from "@/lib/cn";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { Footer } from "@/components/public/Footer";
 import { PhotoLightbox } from "@/components/public/PhotoLightbox";
-import { BeforeAfterTeaser } from "@/components/public/BeforeAfterTeaser";
 import { VideoModal } from "@/components/ui/VideoModal";
 import type { Photo, Reel } from "@/lib/types";
 
 type Tab = "gallery" | "bts";
 type Player = { src: string; title: string; aspect: "vertical" | "wide" };
 
-/** A clickable media tile (photo, before/after, or video). */
+/**
+ * A square, Instagram-style media tile (photo, before/after, or video). The
+ * thumbnail is cropped to a square; the full image / interactive before-after /
+ * playable video opens in the lightbox on tap.
+ */
 function MediaCard({ item, onOpen }: { item: Photo; onOpen: () => void }) {
   const isVideo = !!item.videoUrl;
   const hasBA = !isVideo && !!(item.beforeUrl && item.afterUrl);
+  // For B/A items `url` may be unset, so fall back to the "after" frame.
+  const cover = hasBA ? item.afterUrl! : item.url;
   return (
     <button
       onClick={onOpen}
-      className="group relative mb-5 block w-full break-inside-avoid overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
+      className="group relative aspect-square overflow-hidden rounded-lg bg-white/[0.03] sm:rounded-xl"
     >
-      {hasBA ? (
-        <BeforeAfterTeaser
-          before={item.beforeUrl!}
-          after={item.afterUrl!}
-          className="transition duration-500 group-hover:scale-[1.04]"
-        />
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={item.url}
-          alt={item.title}
-          className={cn(
-            "w-full object-cover transition duration-500 group-hover:scale-[1.04]",
-            isVideo && (item.orientation === "portrait" ? "aspect-[3/4]" : "aspect-video")
-          )}
-        />
-      )}
-      {/* gradient + caption (name shown only when enabled; alt always set above) */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={cover}
+        alt={item.title}
+        loading="lazy"
+        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+      />
+      {/* darken on hover, like Instagram's grid */}
+      <div className="pointer-events-none absolute inset-0 bg-ink-950/0 transition group-hover:bg-ink-950/25" />
+
+      {/* caption on hover (name shown only when enabled; alt always set above) */}
       {item.showName && (
-        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-ink-950/90 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
-          <span className="truncate text-sm font-medium text-white">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end bg-gradient-to-t from-ink-950/90 to-transparent p-2 opacity-0 transition group-hover:opacity-100">
+          <span className="truncate text-xs font-medium text-white">
             {item.title}
           </span>
         </div>
       )}
-      {/* badges */}
-      <div className="absolute left-3 top-3 flex gap-1.5">
-        {hasBA && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-ink-950/70 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
-            <SlidersHorizontal className="h-3 w-3" /> B/A
-          </span>
-        )}
-      </div>
-      {isVideo && (
-        <>
-          <span className="absolute left-1/2 top-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-brand-gradient text-white shadow-3d transition group-hover:scale-110">
-            <Play className="h-6 w-6 translate-x-0.5 fill-current" />
-          </span>
-          {item.durationSec ? (
-            <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-ink-950/70 px-2 py-0.5 text-[11px] text-white backdrop-blur">
-              <Clock className="h-3 w-3" /> {item.durationSec}s
-            </span>
-          ) : null}
-        </>
-      )}
+
+      {/* corner badge */}
+      {isVideo ? (
+        <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-ink-950/55 text-white backdrop-blur">
+          <Play className="h-3.5 w-3.5 translate-x-px fill-current" />
+        </span>
+      ) : hasBA ? (
+        <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-ink-950/55 px-1.5 py-0.5 text-[9px] font-medium text-white backdrop-blur">
+          <SlidersHorizontal className="h-2.5 w-2.5" /> B/A
+        </span>
+      ) : null}
     </button>
   );
 }
@@ -235,7 +223,7 @@ export default function BrandGalleryPage() {
                 No published work yet.
               </p>
             ) : (
-              <div className="columns-1 gap-5 sm:columns-2 lg:columns-3">
+              <div className="grid grid-cols-3 gap-1 sm:grid-cols-4 sm:gap-2 lg:grid-cols-5">
                 {gallery.map((p) => (
                   <MediaCard
                     key={p.id}
@@ -295,7 +283,7 @@ export default function BrandGalleryPage() {
                 <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
                   <Clapperboard className="h-5 w-5 text-brand-cyan" /> On set
                 </h2>
-                <div className="columns-1 gap-5 sm:columns-2 lg:columns-3">
+                <div className="grid grid-cols-3 gap-1 sm:grid-cols-4 sm:gap-2 lg:grid-cols-5">
                   {btsPhotos.map((p) => (
                     <MediaCard
                       key={p.id}
