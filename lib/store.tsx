@@ -92,6 +92,8 @@ interface StoreContextValue extends DataShape {
   linkBrandToCategory: (id: string, categoryId: string) => void;
   /** Remove a brand from one category, keeping it in any others. */
   unlinkBrandFromCategory: (id: string, categoryId: string) => void;
+  /** Show or hide every brand in the homepage strip at once. */
+  setAllBrandsMarquee: (visible: boolean) => void;
   // Photos
   addPhoto: (p: NewPhoto) => Photo;
   updatePhoto: (id: string, patch: Partial<NewPhoto>) => void;
@@ -330,6 +332,13 @@ export function StoreProvider({
     []
   );
 
+  const setAllBrandsMarquee = useCallback((visible: boolean) => {
+    setData((d) => ({
+      ...d,
+      brands: d.brands.map((b) => ({ ...b, showInMarquee: visible })),
+    }));
+  }, []);
+
   // ---- Photos ----
   const addPhoto = useCallback((p: NewPhoto) => {
     const created: Photo = { ...p, id: uid("photo"), createdAt: now() };
@@ -444,6 +453,7 @@ export function StoreProvider({
       moveBrand,
       linkBrandToCategory,
       unlinkBrandFromCategory,
+      setAllBrandsMarquee,
       addPhoto,
       updatePhoto,
       deletePhoto,
@@ -474,6 +484,7 @@ export function StoreProvider({
       moveBrand,
       linkBrandToCategory,
       unlinkBrandFromCategory,
+      setAllBrandsMarquee,
       addPhoto,
       updatePhoto,
       deletePhoto,

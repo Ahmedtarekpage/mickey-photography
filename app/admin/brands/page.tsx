@@ -9,8 +9,14 @@ import { BrandsMarquee } from "@/components/public/BrandsMarquee";
 import { cn } from "@/lib/cn";
 
 export default function BrandsStripPage() {
-  const { brands, settings, updateBrand, reorderBrands, updateSettings } =
-    useStore();
+  const {
+    brands,
+    settings,
+    updateBrand,
+    reorderBrands,
+    updateSettings,
+    setAllBrandsMarquee,
+  } = useStore();
 
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -82,10 +88,28 @@ export default function BrandsStripPage() {
         />
       ) : (
         <section className="surface-raised rounded-3xl p-4 sm:p-5">
-          <p className="mb-3 flex items-center gap-1.5 px-1 text-xs text-slate-500">
-            <GripVertical className="h-3.5 w-3.5" />
-            Drag to reorder · toggle the eye to show or hide each logo in the strip.
-          </p>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+            <p className="flex items-center gap-1.5 text-xs text-slate-500">
+              <GripVertical className="h-3.5 w-3.5" />
+              {visibleBrands.length} of {brands.length} shown · drag to reorder.
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAllBrandsMarquee(true)}
+                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+              >
+                <Eye className="h-4 w-4" /> Show all
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllBrandsMarquee(false)}
+                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:bg-white/10"
+              >
+                <EyeOff className="h-4 w-4" /> Hide all
+              </button>
+            </div>
+          </div>
           <div className="space-y-2">
             {brands.map((b) => {
               const visible = b.showInMarquee !== false;
