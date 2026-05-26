@@ -26,9 +26,10 @@ type Tab = "gallery" | "bts";
 type Player = { src: string; title: string; aspect: "vertical" | "wide" };
 
 /**
- * A square, Instagram-style media tile (photo, before/after, or video). The
- * thumbnail is cropped to a square; the full image / interactive before-after /
- * playable video opens in the lightbox on tap.
+ * A portrait, Instagram-style media tile (photo, before/after, or video). The
+ * thumbnail is cropped to a 4:5 vertical frame (landscape shots fill it, so
+ * they're cropped; portraits fit naturally); the full image / interactive
+ * before-after / playable video opens uncropped in the lightbox on tap.
  */
 function MediaCard({ item, onOpen }: { item: Photo; onOpen: () => void }) {
   const isVideo = !!item.videoUrl;
@@ -38,7 +39,7 @@ function MediaCard({ item, onOpen }: { item: Photo; onOpen: () => void }) {
   return (
     <button
       onClick={onOpen}
-      className="group relative aspect-square overflow-hidden rounded-lg bg-white/[0.03] sm:rounded-xl"
+      className="group relative aspect-[4/5] overflow-hidden rounded-lg bg-white/[0.03] sm:rounded-xl"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
