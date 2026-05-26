@@ -30,6 +30,9 @@ export interface Brand {
   description: string;
   website?: string;
   featured: boolean;
+  /** Show this brand's logo in the homepage "Brands we've created for" scroll.
+   *  Defaults to visible when unset. */
+  showInMarquee?: boolean;
   createdAt: string;
 }
 

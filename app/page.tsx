@@ -16,7 +16,10 @@ export default function LandingPage() {
     <div className="scroll-smooth">
       <SiteHeader settings={settings} />
       <AboutSection settings={settings} />
-      <BrandsMarquee brands={brands} speed={settings.brandsSpeed} />
+      <BrandsMarquee
+        brands={brands.filter((b) => b.showInMarquee !== false)}
+        speed={settings.brandsSpeed}
+      />
       <StatsSection stats={stats} countries={countries} />
       <CategoriesSection />
       <BookSection settings={settings} />

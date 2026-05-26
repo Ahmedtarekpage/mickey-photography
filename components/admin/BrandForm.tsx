@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, Check } from "lucide-react";
+import { Star, Check, Eye } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Textarea } from "@/components/ui/Field";
@@ -17,6 +17,7 @@ export type BrandDraft = {
   description: string;
   website: string;
   featured: boolean;
+  showInMarquee: boolean;
 };
 
 const empty: BrandDraft = {
@@ -26,6 +27,7 @@ const empty: BrandDraft = {
   description: "",
   website: "",
   featured: false,
+  showInMarquee: true,
 };
 
 export function BrandForm({
@@ -58,6 +60,7 @@ export function BrandForm({
               description: initial.description,
               website: initial.website ?? "",
               featured: initial.featured,
+              showInMarquee: initial.showInMarquee ?? true,
             }
           : empty
       );
@@ -201,6 +204,44 @@ export function BrandForm({
             <span
               className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
                 draft.featured ? "left-[22px]" : "left-0.5"
+              }`}
+            />
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => set("showInMarquee", !draft.showInMarquee)}
+          className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition ${
+            draft.showInMarquee
+              ? "border-brand-cyan/40 bg-brand-cyan/10"
+              : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+          }`}
+        >
+          <span className="flex items-center gap-3">
+            <Eye
+              className={`h-5 w-5 ${
+                draft.showInMarquee ? "text-brand-cyan" : "text-slate-500"
+              }`}
+            />
+            <span>
+              <span className="block text-sm font-medium text-white">
+                Show in brands strip
+              </span>
+              <span className="block text-xs text-slate-400">
+                The scrolling logos on the home page (&ldquo;Brands we&apos;ve
+                created for&rdquo;).
+              </span>
+            </span>
+          </span>
+          <span
+            className={`relative h-6 w-11 rounded-full transition ${
+              draft.showInMarquee ? "bg-brand-cyan" : "bg-white/15"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
+                draft.showInMarquee ? "left-[22px]" : "left-0.5"
               }`}
             />
           </span>

@@ -19,6 +19,7 @@ import { useStore } from "@/lib/store";
 const nav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/admin/categories", label: "Categories", icon: FolderKanban },
+  { href: "/admin/brands", label: "Brands strip", icon: Aperture },
   { href: "/admin/stats", label: "Stats", icon: BarChart3 },
   { href: "/admin/countries", label: "Countries", icon: Globe },
   { href: "/admin/settings", label: "Site settings", icon: Settings },
