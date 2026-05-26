@@ -13,13 +13,13 @@ import { Check, AlertTriangle, Info, X } from "lucide-react";
 import { cn } from "./cn";
 
 type ToastType = "success" | "error" | "info";
-type Toast = { id: number; type: ToastType; message: string };
+type Toast = { id: number; type: ToastType; message: string; emoji?: string };
 
 interface ToastApi {
-  show: (message: string, type?: ToastType) => void;
-  success: (message: string) => void;
-  error: (message: string) => void;
-  info: (message: string) => void;
+  show: (message: string, type?: ToastType, emoji?: string) => void;
+  success: (message: string, emoji?: string) => void;
+  error: (message: string, emoji?: string) => void;
+  info: (message: string, emoji?: string) => void;
 }
 
 const ToastContext = createContext<ToastApi | null>(null);
@@ -75,9 +75,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const show = useCallback(
-    (message: string, type: ToastType = "success") => {
+    (message: string, type: ToastType = "success", emoji?: string) => {
       const id = ++idRef.current;
-      setToasts((t) => [...t, { id, type, message }]);
+      setToasts((t) => [...t, { id, type, message, emoji }]);
       playChime(type);
       setTimeout(() => dismiss(id), 3800);
     },
@@ -87,9 +87,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const api = useMemo<ToastApi>(
     () => ({
       show,
-      success: (m) => show(m, "success"),
-      error: (m) => show(m, "error"),
-      info: (m) => show(m, "info"),
+      success: (m, emoji) => show(m, "success", emoji),
+      error: (m, emoji) => show(m, "error", emoji),
+      info: (m, emoji) => show(m, "info", emoji),
     }),
     [show]
   );
@@ -109,11 +109,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 >
                   <span
                     className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                       chip
                     )}
                   >
-                    <Icon className="h-5 w-5" />
+                    {t.emoji ? (
+                      <span className="animate-emoji-pop text-2xl leading-none">
+                        {t.emoji}
+                      </span>
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
                   </span>
                   <p className="flex-1 text-sm font-medium text-white">
                     {t.message}

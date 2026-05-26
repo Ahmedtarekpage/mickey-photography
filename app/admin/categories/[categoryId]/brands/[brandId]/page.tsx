@@ -139,7 +139,8 @@ export default function BrandDetailPage() {
     setBulk(null);
     if (photos.length)
       toast.success(
-        `${photos.length} photo${photos.length === 1 ? "" : "s"} uploaded`
+        `${photos.length} photo${photos.length === 1 ? "" : "s"} uploaded`,
+        "🎉"
       );
   };
 
@@ -148,7 +149,10 @@ export default function BrandDetailPage() {
     store.deletePhotos(ids);
     setSelected(new Set());
     setBulkDeleteOpen(false);
-    toast.success(`${ids.length} photo${ids.length === 1 ? "" : "s"} deleted`);
+    toast.success(
+      `${ids.length} photo${ids.length === 1 ? "" : "s"} deleted`,
+      "🗑️"
+    );
   };
   const openEditPhoto = (p: Photo) => {
     setEditingPhoto(p);
@@ -168,12 +172,13 @@ export default function BrandDetailPage() {
       beforeUrl: !isVideo && draft.hasComparison ? draft.beforeUrl : undefined,
       afterUrl: !isVideo && draft.hasComparison ? draft.afterUrl : undefined,
     };
+    const label = noun === "video" ? "Video" : "Photo";
     if (editingPhoto) {
       store.updatePhoto(editingPhoto.id, payload);
-      toast.success(`${noun === "video" ? "Video" : "Photo"} updated`);
+      toast.success(`${label} updated`, "✏️");
     } else {
       store.addPhoto(payload);
-      toast.success(`${noun === "video" ? "Video" : "Photo"} added`);
+      toast.success(`${label} added`, "✨");
     }
     setPhotoFormOpen(false);
   };
@@ -603,7 +608,7 @@ export default function BrandDetailPage() {
           if (deletingPhoto) {
             void deleteBlob(deletingPhoto.videoUrl);
             store.deletePhoto(deletingPhoto.id);
-            toast.success(`${noun === "video" ? "Video" : "Photo"} deleted`);
+            toast.success(`${noun === "video" ? "Video" : "Photo"} deleted`, "🗑️");
           }
           setDeletingPhoto(null);
         }}
