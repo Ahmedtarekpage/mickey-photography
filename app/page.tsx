@@ -2,6 +2,10 @@
 
 import { useStore } from "@/lib/store";
 import { SiteHeader } from "@/components/public/SiteHeader";
+import {
+  Hero3DBackground,
+  ShutterFlash,
+} from "@/components/public/Hero3DBackground";
 import { AboutSection } from "@/components/public/AboutSection";
 import { BrandsMarquee } from "@/components/public/BrandsMarquee";
 import { StatsSection } from "@/components/public/StatsSection";
@@ -14,6 +18,8 @@ export default function LandingPage() {
 
   return (
     <div className="scroll-smooth">
+      <Hero3DBackground />
+      <ShutterFlash />
       <SiteHeader settings={settings} />
       <AboutSection settings={settings} />
       <BrandsMarquee
