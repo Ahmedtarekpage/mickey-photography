@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import {
   Images,
@@ -13,8 +13,11 @@ import {
   GalleryHorizontalEnd,
   Video,
   Upload,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useStore, useBrand, useCategory } from "@/lib/store";
+import { useToast } from "@/lib/toast";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -42,6 +45,7 @@ export default function BrandDetailPage() {
     brandId: string;
   }>();
   const store = useStore();
+  const toast = useToast();
   const brand = useBrand(brandId);
   const category = useCategory(categoryId);
 
@@ -75,6 +79,20 @@ export default function BrandDetailPage() {
 
   // Unified video player (reels + gallery videos)
   const [player, setPlayer] = useState<PlayerState | null>(null);
+
+  // Multi-select for bulk photo delete (cleared when switching tabs).
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  useEffect(() => {
+    setSelected(new Set());
+  }, [tab, btsTab]);
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   if (store.ready && !brand) notFound();
 
@@ -119,6 +137,18 @@ export default function BrandDetailPage() {
       });
     }
     setBulk(null);
+    if (photos.length)
+      toast.success(
+        `${photos.length} photo${photos.length === 1 ? "" : "s"} uploaded`
+      );
+  };
+
+  const confirmBulkDelete = () => {
+    const ids = Array.from(selected);
+    store.deletePhotos(ids);
+    setSelected(new Set());
+    setBulkDeleteOpen(false);
+    toast.success(`${ids.length} photo${ids.length === 1 ? "" : "s"} deleted`);
   };
   const openEditPhoto = (p: Photo) => {
     setEditingPhoto(p);
@@ -138,8 +168,13 @@ export default function BrandDetailPage() {
       beforeUrl: !isVideo && draft.hasComparison ? draft.beforeUrl : undefined,
       afterUrl: !isVideo && draft.hasComparison ? draft.afterUrl : undefined,
     };
-    if (editingPhoto) store.updatePhoto(editingPhoto.id, payload);
-    else store.addPhoto(payload);
+    if (editingPhoto) {
+      store.updatePhoto(editingPhoto.id, payload);
+      toast.success(`${noun === "video" ? "Video" : "Photo"} updated`);
+    } else {
+      store.addPhoto(payload);
+      toast.success(`${noun === "video" ? "Video" : "Photo"} added`);
+    }
     setPhotoFormOpen(false);
   };
 
@@ -313,6 +348,31 @@ export default function BrandDetailPage() {
         )}
       </div>
 
+      {/* Multi-select action bar */}
+      {selected.size > 0 && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-brand-fuchsia/30 bg-brand-fuchsia/10 px-4 py-2.5 animate-fade-in">
+          <span className="text-sm font-medium text-white">
+            {selected.size} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelected(new Set())}
+            >
+              <X className="h-4 w-4" /> Clear
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setBulkDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" /> Delete selected
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* GALLERY TAB */}
       {tab === "gallery" &&
         (galleryPhotos.length === 0 ? (
@@ -346,6 +406,8 @@ export default function BrandDetailPage() {
             onToggleName={(p) =>
               store.updatePhoto(p.id, { showName: !p.showName })
             }
+            selected={selected}
+            onToggleSelect={toggleSelect}
           />
         ))}
 
@@ -480,6 +542,8 @@ export default function BrandDetailPage() {
                 onToggleName={(p) =>
                   store.updatePhoto(p.id, { showName: !p.showName })
                 }
+                selected={selected}
+                onToggleSelect={toggleSelect}
               />
             ))}
         </div>
@@ -539,10 +603,21 @@ export default function BrandDetailPage() {
           if (deletingPhoto) {
             void deleteBlob(deletingPhoto.videoUrl);
             store.deletePhoto(deletingPhoto.id);
+            toast.success(`${noun === "video" ? "Video" : "Photo"} deleted`);
           }
           setDeletingPhoto(null);
         }}
         onCancel={() => setDeletingPhoto(null)}
+      />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title={`Delete ${selected.size} ${
+          selected.size === 1 ? "photo" : "photos"
+        }?`}
+        message="The selected items will be permanently removed. This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setBulkDeleteOpen(false)}
       />
       <ConfirmDialog
         open={!!deletingReel}

@@ -96,6 +96,8 @@ interface StoreContextValue extends DataShape {
   addPhoto: (p: NewPhoto) => Photo;
   updatePhoto: (id: string, patch: Partial<NewPhoto>) => void;
   deletePhoto: (id: string) => void;
+  /** Delete several photos at once. */
+  deletePhotos: (ids: string[]) => void;
   /** Reorder the given photos (e.g. one brand section) into `orderedIds`,
    *  leaving any photos not in that set in their existing positions. */
   reorderPhotos: (orderedIds: string[]) => void;
@@ -346,6 +348,11 @@ export function StoreProvider({
     setData((d) => ({ ...d, photos: d.photos.filter((p) => p.id !== id) }));
   }, []);
 
+  const deletePhotos = useCallback((ids: string[]) => {
+    const set = new Set(ids);
+    setData((d) => ({ ...d, photos: d.photos.filter((p) => !set.has(p.id)) }));
+  }, []);
+
   const reorderPhotos = useCallback((orderedIds: string[]) => {
     setData((d) => {
       const inSet = new Set(orderedIds);
@@ -440,6 +447,7 @@ export function StoreProvider({
       addPhoto,
       updatePhoto,
       deletePhoto,
+      deletePhotos,
       reorderPhotos,
       addReel,
       updateReel,
@@ -469,6 +477,7 @@ export function StoreProvider({
       addPhoto,
       updatePhoto,
       deletePhoto,
+      deletePhotos,
       reorderPhotos,
       addReel,
       updateReel,

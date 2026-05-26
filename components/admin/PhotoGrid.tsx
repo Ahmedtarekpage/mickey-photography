@@ -10,6 +10,7 @@ import {
   GripVertical,
   Eye,
   EyeOff,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { CardMenu } from "@/components/ui/CardMenu";
@@ -24,6 +25,8 @@ export function PhotoGrid({
   onPlay,
   onReorder,
   onToggleName,
+  selected,
+  onToggleSelect,
 }: {
   photos: Photo[];
   onEdit: (p: Photo) => void;
@@ -34,6 +37,10 @@ export function PhotoGrid({
   onReorder?: (orderedIds: string[]) => void;
   /** Toggle whether this photo's name shows as a caption on the site. */
   onToggleName?: (p: Photo) => void;
+  /** Set of selected photo ids (enables multi-select checkboxes). */
+  selected?: Set<string>;
+  /** Toggle a photo's selection. */
+  onToggleSelect?: (id: string) => void;
 }) {
   // Drag-and-drop (desktop). A card is only draggable while its grip handle is
   // held — keeps the menu, play button and before/after slider fully usable.
@@ -92,8 +99,7 @@ export function PhotoGrid({
             className={cn(
               "card-3d group relative break-inside-avoid overflow-hidden",
               dragId === p.id && "opacity-40",
-              overId === p.id &&
-                dragId !== p.id &&
+              ((overId === p.id && dragId !== p.id) || selected?.has(p.id)) &&
                 "ring-2 ring-brand-fuchsia ring-offset-2 ring-offset-ink-900"
             )}
           >
@@ -101,6 +107,25 @@ export function PhotoGrid({
               <CardMenu onEdit={() => onEdit(p)} onDelete={() => onDelete(p)} />
             </div>
             <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
+              {onToggleSelect && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggleSelect(p.id);
+                  }}
+                  aria-label={selected?.has(p.id) ? "Deselect" : "Select"}
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-lg border backdrop-blur transition",
+                    selected?.has(p.id)
+                      ? "border-brand-fuchsia bg-brand-fuchsia text-white"
+                      : "border-white/25 bg-ink-950/50 text-transparent opacity-0 group-hover:opacity-100"
+                  )}
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+              )}
               {onReorder && (
                 // Drag handle — press and drag to reorder (desktop).
                 <span

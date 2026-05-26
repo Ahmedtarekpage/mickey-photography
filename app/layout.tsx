@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
+import { ToastProvider } from "@/lib/toast";
 import { getSiteMeta } from "@/lib/siteMeta";
 import { getInitialData } from "@/lib/serverData";
 
@@ -30,7 +31,9 @@ export default async function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body>
-        <StoreProvider initialData={initialData}>{children}</StoreProvider>
+        <StoreProvider initialData={initialData}>
+          <ToastProvider>{children}</ToastProvider>
+        </StoreProvider>
       </body>
     </html>
   );
