@@ -49,6 +49,13 @@ export function EarthGlobe({
     c.maxDistance = 520;
   }, [size]);
 
+  // Pause the spin while the user is interacting, so flags hold still and are
+  // easy to click; resume when the pointer leaves.
+  const setAutoRotate = (on: boolean) => {
+    const g = globeRef.current;
+    if (g) g.controls().autoRotate = on;
+  };
+
   const markers: Marker[] = countries
     .map((c) => {
       const co = COUNTRY_COORDS[c.code];
@@ -79,7 +86,13 @@ export function EarthGlobe({
   };
 
   return (
-    <div ref={wrapRef} className="mx-auto w-full max-w-[540px]">
+    <div
+      ref={wrapRef}
+      className="mx-auto w-full max-w-[540px]"
+      onMouseEnter={() => setAutoRotate(false)}
+      onMouseLeave={() => setAutoRotate(true)}
+      onPointerDown={() => setAutoRotate(false)}
+    >
       <Globe
         ref={globeRef}
         width={size}
