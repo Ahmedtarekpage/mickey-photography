@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useParams, notFound } from "next/navigation";
 import {
   Images,
@@ -12,7 +12,9 @@ import {
   Clapperboard,
   GalleryHorizontalEnd,
   Video,
+  Upload,
 } from "lucide-react";
+import { uploadFile } from "@/lib/uploadMedia";
 import { useStore, useBrand, useCategory } from "@/lib/store";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -28,11 +30,33 @@ import { PhotoGrid } from "@/components/admin/PhotoGrid";
 import { ReelGrid } from "@/components/admin/ReelGrid";
 import { ArrangeMenu } from "@/components/admin/ArrangeMenu";
 import { deleteBlob } from "@/lib/mediaStore";
-import type { Photo, PhotoSection, Reel } from "@/lib/types";
+import type { Orientation, Photo, PhotoSection, Reel } from "@/lib/types";
 
 type Tab = "gallery" | "bts";
 type BtsTab = "reels" | "gallery";
 type PlayerState = { src: string; title: string; aspect: "vertical" | "wide" };
+
+/** "name.JPG" -> "name" — the photo name used for the SEO alt text. */
+function nameFromFile(fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, "").trim() || fileName;
+}
+
+/** Detect orientation from an image file's dimensions (defaults to landscape). */
+function detectOrientation(file: File): Promise<Orientation> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img.naturalWidth >= img.naturalHeight ? "landscape" : "portrait");
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve("landscape");
+    };
+    img.src = url;
+  });
+}
 
 export default function BrandDetailPage() {
   const { categoryId, brandId } = useParams<{
@@ -58,6 +82,11 @@ export default function BrandDetailPage() {
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [newPhotoSection, setNewPhotoSection] = useState<PhotoSection>("gallery");
   const [deletingPhoto, setDeletingPhoto] = useState<Photo | null>(null);
+
+  // Bulk image upload (select many from the computer at once).
+  const bulkInputRef = useRef<HTMLInputElement>(null);
+  const bulkSectionRef = useRef<PhotoSection>("gallery");
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   // Reel state
   const [reelFormOpen, setReelFormOpen] = useState(false);
@@ -89,6 +118,49 @@ export default function BrandDetailPage() {
     setNewPhotoSection(section);
     setPhotoFormOpen(true);
   };
+
+  // Open the file picker for a bulk upload into the given section.
+  const openBulkUpload = (section: PhotoSection) => {
+    bulkSectionRef.current = section;
+    bulkInputRef.current?.click();
+  };
+  // Upload every selected file to R2, name each from its filename (kept for SEO,
+  // hidden as a caption by default), then add them in the order they were picked.
+  const handleBulkFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const section = bulkSectionRef.current;
+      const results = await Promise.allSettled(
+        Array.from(files).map(async (file) => {
+          const [url, orientation] = await Promise.all([
+            uploadFile(file),
+            detectOrientation(file),
+          ]);
+          return { url, orientation, title: nameFromFile(file.name) };
+        })
+      );
+      const ready = results
+        .filter(
+          (r): r is PromiseFulfilledResult<{ url: string; orientation: Orientation; title: string }> =>
+            r.status === "fulfilled"
+        )
+        .map((r) => r.value);
+      // addPhoto prepends, so add in reverse to keep the picked order at the top.
+      for (let i = ready.length - 1; i >= 0; i--) {
+        store.addPhoto({
+          brandId,
+          section,
+          title: ready[i].title,
+          showName: false,
+          orientation: ready[i].orientation,
+          url: ready[i].url,
+        });
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  };
   const openEditPhoto = (p: Photo) => {
     setEditingPhoto(p);
     setPhotoFormOpen(true);
@@ -98,6 +170,7 @@ export default function BrandDetailPage() {
       brandId,
       section: editingPhoto ? editingPhoto.section : newPhotoSection,
       title: draft.title,
+      showName: draft.showName,
       orientation: draft.orientation,
       url: draft.url,
       videoUrl: isVideo ? draft.videoUrl.trim() || undefined : undefined,
@@ -266,6 +339,16 @@ export default function BrandDetailPage() {
                 onReorder={store.reorderPhotos}
               />
             )}
+            {!isVideo && (
+              <Button
+                variant="outline"
+                loading={bulkBusy}
+                onClick={() => openBulkUpload("gallery")}
+              >
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">Upload images</span>
+              </Button>
+            )}
             <Button onClick={() => openAddPhoto("gallery")}>
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Add {noun}</span>
@@ -298,6 +381,9 @@ export default function BrandDetailPage() {
             onDelete={setDeletingPhoto}
             onPlay={playVideoItem}
             onReorder={store.reorderPhotos}
+            onToggleName={(p) =>
+              store.updatePhoto(p.id, { showName: !p.showName })
+            }
           />
         ))}
 
@@ -352,6 +438,16 @@ export default function BrandDetailPage() {
                     items={btsPhotos}
                     onReorder={store.reorderPhotos}
                   />
+                )}
+                {!isVideo && (
+                  <Button
+                    variant="outline"
+                    loading={bulkBusy}
+                    onClick={() => openBulkUpload("bts")}
+                  >
+                    <Upload className="h-4 w-4" />
+                    <span className="hidden sm:inline">Upload images</span>
+                  </Button>
                 )}
                 <Button onClick={() => openAddPhoto("bts")}>
                   <Plus className="h-4 w-4" />
@@ -416,10 +512,26 @@ export default function BrandDetailPage() {
                 onDelete={setDeletingPhoto}
                 onPlay={playVideoItem}
                 onReorder={store.reorderPhotos}
+                onToggleName={(p) =>
+                  store.updatePhoto(p.id, { showName: !p.showName })
+                }
               />
             ))}
         </div>
       )}
+
+      {/* Hidden input for bulk image upload */}
+      <input
+        ref={bulkInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          handleBulkFiles(e.target.files);
+          e.target.value = ""; // allow re-selecting the same files
+        }}
+      />
 
       {/* Modals */}
       <BrandForm

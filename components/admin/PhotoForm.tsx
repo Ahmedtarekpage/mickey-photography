@@ -5,6 +5,7 @@ import {
   RectangleHorizontal,
   RectangleVertical,
   SlidersHorizontal,
+  Eye,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -16,6 +17,7 @@ import type { Orientation, Photo } from "@/lib/types";
 
 export type PhotoDraft = {
   title: string;
+  showName: boolean;
   orientation: Orientation;
   url: string;
   videoUrl: string;
@@ -27,6 +29,7 @@ export type PhotoDraft = {
 
 const empty: PhotoDraft = {
   title: "",
+  showName: false,
   orientation: "landscape",
   url: "",
   videoUrl: "",
@@ -62,6 +65,7 @@ export function PhotoForm({
         initial
           ? {
               title: initial.title,
+              showName: initial.showName ?? false,
               orientation: initial.orientation,
               url: initial.url,
               videoUrl: initial.videoUrl ?? "",
@@ -112,7 +116,10 @@ export function PhotoForm({
       }
     >
       <div className="space-y-5">
-        <Field label="Title">
+        <Field
+          label="Name"
+          hint="(used as the image's alt text for SEO — search engines read it)"
+        >
           <Input
             value={draft.title}
             onChange={(e) => set("title", e.target.value)}
@@ -122,6 +129,47 @@ export function PhotoForm({
             autoFocus
           />
         </Field>
+
+        <button
+          type="button"
+          onClick={() => set("showName", !draft.showName)}
+          className={cn(
+            "flex w-full items-center justify-between rounded-2xl border p-4 text-left transition",
+            draft.showName
+              ? "border-brand-fuchsia/40 bg-brand-fuchsia/10"
+              : "border-white/10 bg-white/[0.03] hover:bg-white/[0.06]"
+          )}
+        >
+          <span className="flex items-center gap-3">
+            <Eye
+              className={cn(
+                "h-5 w-5",
+                draft.showName ? "text-brand-fuchsia" : "text-slate-500"
+              )}
+            />
+            <span>
+              <span className="block text-sm font-medium text-white">
+                Show name on the site
+              </span>
+              <span className="block text-xs text-slate-400">
+                Display the name as a caption. Off = used for SEO only (hidden).
+              </span>
+            </span>
+          </span>
+          <span
+            className={cn(
+              "relative h-6 w-11 rounded-full transition",
+              draft.showName ? "bg-brand-fuchsia" : "bg-white/15"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 h-5 w-5 rounded-full bg-white transition",
+                draft.showName ? "left-[22px]" : "left-0.5"
+              )}
+            />
+          </span>
+        </button>
 
         <Field label="Orientation">
           <div className="grid grid-cols-2 gap-3">

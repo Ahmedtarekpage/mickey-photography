@@ -119,9 +119,11 @@ export function PhotoLightbox({
         </div>
       </div>
 
-      {/* Caption */}
+      {/* Caption (name shown only when enabled; alt always set on the image) */}
       <div className="flex flex-wrap items-center justify-center gap-3 px-5 py-5 text-center">
-        <span className="text-base font-medium text-white">{item.title}</span>
+        {item.showName && (
+          <span className="text-base font-medium text-white">{item.title}</span>
+        )}
         <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2.5 py-0.5 text-[11px] text-slate-300">
           {item.orientation === "portrait" ? (
             <RectangleVertical className="h-3 w-3" />

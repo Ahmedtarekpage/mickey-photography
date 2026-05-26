@@ -53,12 +53,14 @@ function MediaCard({ item, onOpen }: { item: Photo; onOpen: () => void }) {
           )}
         />
       )}
-      {/* gradient + caption */}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-ink-950/90 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
-        <span className="truncate text-sm font-medium text-white">
-          {item.title}
-        </span>
-      </div>
+      {/* gradient + caption (name shown only when enabled; alt always set above) */}
+      {item.showName && (
+        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-gradient-to-t from-ink-950/90 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
+          <span className="truncate text-sm font-medium text-white">
+            {item.title}
+          </span>
+        </div>
+      )}
       {/* badges */}
       <div className="absolute left-3 top-3 flex gap-1.5">
         {hasBA && (

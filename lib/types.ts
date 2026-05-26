@@ -43,7 +43,11 @@ export interface Photo {
   brandId: string;
   /** "gallery" = finished portfolio work, "bts" = behind-the-scenes. */
   section: PhotoSection;
+  /** Image name. Always used as the SEO alt text; shown as a visible caption
+   *  only when `showName` is true. */
   title: string;
+  /** Whether the name shows as a caption on the site/admin (default hidden). */
+  showName?: boolean;
   orientation: Orientation;
   /** Image URL, or the poster/thumbnail when this item is a video. */
   url: string;

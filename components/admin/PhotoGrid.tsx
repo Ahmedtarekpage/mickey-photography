@@ -8,6 +8,8 @@ import {
   Play,
   Clock,
   GripVertical,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { CardMenu } from "@/components/ui/CardMenu";
@@ -21,6 +23,7 @@ export function PhotoGrid({
   onDelete,
   onPlay,
   onReorder,
+  onToggleName,
 }: {
   photos: Photo[];
   onEdit: (p: Photo) => void;
@@ -29,6 +32,8 @@ export function PhotoGrid({
   onPlay?: (p: Photo) => void;
   /** Called with the new id order when cards are dragged to reorder. */
   onReorder?: (orderedIds: string[]) => void;
+  /** Toggle whether this photo's name shows as a caption on the site. */
+  onToggleName?: (p: Photo) => void;
 }) {
   // Drag-and-drop (desktop). A card is only draggable while its grip handle is
   // held — keeps the menu, play button and before/after slider fully usable.
@@ -168,8 +173,32 @@ export function PhotoGrid({
               />
             )}
 
-            <div className="p-4">
-              <p className="truncate text-sm font-medium text-white">{p.title}</p>
+            <div className="flex items-center gap-2 p-3" title={p.title}>
+              {onToggleName && (
+                <button
+                  type="button"
+                  onClick={() => onToggleName(p)}
+                  title={
+                    p.showName
+                      ? "Name shows on the site — click to hide"
+                      : "Name hidden (SEO only) — click to show"
+                  }
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/10 hover:text-white"
+                >
+                  {p.showName ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+              {p.showName ? (
+                <p className="truncate text-sm font-medium text-white">{p.title}</p>
+              ) : (
+                <p className="truncate text-sm italic text-slate-500">
+                  Name hidden
+                </p>
+              )}
             </div>
           </div>
         );
