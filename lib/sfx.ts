@@ -51,3 +51,50 @@ export function shutterClick() {
   click(c, t, 0.05, 2300, 0.5); // mirror flips up
   click(c, t + 0.06, 0.075, 1500, 0.42); // shutter closes
 }
+
+/** A short, soft tone — a tactile UI "tap" when a card/photo is pressed. */
+export function tapSound() {
+  const c = getCtx();
+  if (!c) return;
+  if (c.state === "suspended") c.resume().catch(() => {});
+  const t = c.currentTime;
+  const osc = c.createOscillator();
+  const g = c.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(560, t);
+  osc.frequency.exponentialRampToValueAtTime(320, t + 0.09);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.22, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+  osc.connect(g).connect(c.destination);
+  osc.start(t);
+  osc.stop(t + 0.12);
+}
+
+/** A quick airy "whoosh" — played when swiping between photos. */
+export function swipeSound() {
+  const c = getCtx();
+  if (!c) return;
+  if (c.state === "suspended") c.resume().catch(() => {});
+  const t = c.currentTime;
+  const dur = 0.16;
+  const n = Math.floor(c.sampleRate * dur);
+  const buf = c.createBuffer(1, n, c.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n);
+
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  const bp = c.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.Q.value = 1.2;
+  bp.frequency.setValueAtTime(900, t);
+  bp.frequency.exponentialRampToValueAtTime(2400, t + dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.16, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+  src.connect(bp).connect(g).connect(c.destination);
+  src.start(t);
+  src.stop(t + dur);
+}

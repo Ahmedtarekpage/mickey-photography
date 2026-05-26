@@ -12,6 +12,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { tapSound } from "@/lib/sfx";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { Footer } from "@/components/public/Footer";
 
@@ -94,7 +95,8 @@ export default function CategoryBrandsPage() {
                 <Link
                   key={b.id}
                   href={`/work/${categoryId}/${b.id}`}
-                  className="card-3d group relative flex flex-col overflow-hidden"
+                  onClick={() => tapSound()}
+                  className="card-3d group relative flex flex-col overflow-hidden active:scale-[0.98]"
                 >
                   {/* Thumbnail from the brand's gallery */}
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-ink-800">

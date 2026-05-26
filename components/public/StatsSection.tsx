@@ -80,20 +80,22 @@ export function StatsSection({
 
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-8">
           {/* LEFT — numbers */}
-          <div className="grid grid-cols-2 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-5">
             {stats.map((s) => (
               <div
                 key={s.id}
-                className="card-3d group flex flex-col items-start p-5 sm:p-6"
+                className="card-3d group flex flex-col items-start p-4 sm:p-6"
               >
-                <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-gradient text-white shadow-3d transition group-hover:scale-110">
-                  <StatIcon name={s.icon} className="h-6 w-6" />
+                <div className="mb-2.5 flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-gradient text-white shadow-3d transition group-hover:scale-110 sm:mb-3 sm:h-11 sm:w-11">
+                  <StatIcon name={s.icon} className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
-                <p className="text-3xl font-black tracking-tight text-white sm:text-4xl">
+                <p className="flex items-baseline whitespace-nowrap text-2xl font-black leading-none tracking-tight text-white tabular-nums sm:text-4xl">
                   <CountUp value={s.value} />
                   <span className="text-gradient">{s.suffix}</span>
                 </p>
-                <p className="mt-1 text-sm text-slate-400">{s.label}</p>
+                <p className="mt-1.5 text-xs leading-snug text-slate-400 sm:text-sm">
+                  {s.label}
+                </p>
               </div>
             ))}
           </div>

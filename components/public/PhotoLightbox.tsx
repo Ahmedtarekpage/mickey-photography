@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { BeforeAfterSlider } from "@/components/ui/BeforeAfterSlider";
 import { useMediaSrc } from "@/lib/useMediaSrc";
+import { swipeSound } from "@/lib/sfx";
 import type { Photo } from "@/lib/types";
 
 const MIN_SCALE = 1;
@@ -32,10 +33,13 @@ const clamp = (n: number, lo: number, hi: number) =>
 function ZoomableImage({
   src,
   alt,
+  dir = 1,
   swipe,
 }: {
   src: string;
   alt: string;
+  /** Direction of the navigation that revealed this photo (slides it in). */
+  dir?: number;
   /** Navigate when the user swipes while at 1× (omit to disable). */
   swipe?: (dir: number) => void;
 }) {
@@ -235,13 +239,15 @@ function ZoomableImage({
       onPointerCancel={onPointerUp}
     >
       <div ref={wrapRef} className="will-change-transform">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={src}
-          alt={alt}
-          draggable={false}
-          className="max-h-[72vh] w-auto max-w-[94vw] select-none rounded-2xl object-contain sm:max-w-[86vw]"
-        />
+        <div className={`inline-block ${dir < 0 ? "animate-img-in-left" : "animate-img-in"}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={src}
+            alt={alt}
+            draggable={false}
+            className="block max-h-[72vh] w-auto max-w-[94vw] select-none rounded-2xl object-contain sm:max-w-[86vw]"
+          />
+        </div>
       </div>
 
       {/* Zoom controls (handy on laptop; work on touch too) */}
@@ -284,8 +290,13 @@ export function PhotoLightbox({
   const hasBA = !isVideo && !!(item?.beforeUrl && item?.afterUrl);
   const videoSrc = useMediaSrc(open && isVideo ? item!.videoUrl! : "");
 
-  const go = (dir: number) =>
+  // Remember the last direction so the new photo slides in the right way.
+  const [navDir, setNavDir] = useState(1);
+  const go = (dir: number) => {
+    setNavDir(dir);
+    swipeSound();
     onIndex((index + dir + items.length) % items.length);
+  };
 
   // Swipe-to-navigate applies to plain photos (handled inside ZoomableImage).
   const canSwipe = items.length > 1 && !isVideo && !hasBA;
@@ -379,6 +390,7 @@ export function PhotoLightbox({
             key={item.id}
             src={item.url}
             alt={item.title}
+            dir={navDir}
             swipe={canSwipe ? go : undefined}
           />
         )}

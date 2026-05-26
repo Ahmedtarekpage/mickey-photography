@@ -66,6 +66,15 @@ const config: Config = {
           "55%": { transform: "scale(1.3) rotate(10deg)", opacity: "1" },
           "100%": { transform: "scale(1) rotate(0deg)", opacity: "1" },
         },
+        /* Lightbox photo entrance — slides in from the swipe direction. */
+        "img-in": {
+          from: { opacity: "0", transform: "translateX(28px) scale(0.98)" },
+          to: { opacity: "1", transform: "translateX(0) scale(1)" },
+        },
+        "img-in-left": {
+          from: { opacity: "0", transform: "translateX(-28px) scale(0.98)" },
+          to: { opacity: "1", transform: "translateX(0) scale(1)" },
+        },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-6px)" },
@@ -94,6 +103,8 @@ const config: Config = {
         "scale-in": "scale-in 0.25s ease-out both",
         "toast-in": "toast-in 0.32s cubic-bezier(0.22,1,0.36,1) both",
         "emoji-pop": "emoji-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
+        "img-in": "img-in 0.32s cubic-bezier(0.22,1,0.36,1) both",
+        "img-in-left": "img-in-left 0.32s cubic-bezier(0.22,1,0.36,1) both",
         float: "float 6s ease-in-out infinite",
         shimmer: "shimmer 1.6s infinite",
         marquee: "marquee var(--marquee-duration, 40s) linear infinite",

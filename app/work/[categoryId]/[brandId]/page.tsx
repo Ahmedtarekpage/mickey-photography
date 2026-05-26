@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/cn";
+import { tapSound } from "@/lib/sfx";
 import { SiteHeader } from "@/components/public/SiteHeader";
 import { Footer } from "@/components/public/Footer";
 import { PhotoLightbox } from "@/components/public/PhotoLightbox";
@@ -38,8 +39,11 @@ function MediaCard({ item, onOpen }: { item: Photo; onOpen: () => void }) {
   const cover = hasBA ? item.afterUrl! : item.url;
   return (
     <button
-      onClick={onOpen}
-      className="group relative aspect-[4/5] overflow-hidden rounded-lg bg-white/[0.03] sm:rounded-xl"
+      onClick={() => {
+        tapSound();
+        onOpen();
+      }}
+      className="group relative aspect-[4/5] overflow-hidden rounded-lg bg-white/[0.03] transition-transform duration-150 active:scale-[0.97] sm:rounded-xl"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
