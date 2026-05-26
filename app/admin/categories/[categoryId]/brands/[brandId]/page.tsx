@@ -26,6 +26,7 @@ import { PhotoForm, type PhotoDraft } from "@/components/admin/PhotoForm";
 import { ReelForm, type ReelDraft } from "@/components/admin/ReelForm";
 import { PhotoGrid } from "@/components/admin/PhotoGrid";
 import { ReelGrid } from "@/components/admin/ReelGrid";
+import { ArrangeMenu } from "@/components/admin/ArrangeMenu";
 import { deleteBlob } from "@/lib/mediaStore";
 import type { Photo, PhotoSection, Reel } from "@/lib/types";
 
@@ -258,10 +259,18 @@ export default function BrandDetailPage() {
           ))}
         </div>
         {tab === "gallery" && (
-          <Button onClick={() => openAddPhoto("gallery")}>
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Add {noun}</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {galleryPhotos.length > 1 && (
+              <ArrangeMenu
+                items={galleryPhotos}
+                onReorder={store.reorderPhotos}
+              />
+            )}
+            <Button onClick={() => openAddPhoto("gallery")}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add {noun}</span>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -288,6 +297,7 @@ export default function BrandDetailPage() {
             onEdit={openEditPhoto}
             onDelete={setDeletingPhoto}
             onPlay={playVideoItem}
+            onReorder={store.reorderPhotos}
           />
         ))}
 
@@ -336,10 +346,18 @@ export default function BrandDetailPage() {
                 <span className="hidden sm:inline">Add reel</span>
               </Button>
             ) : (
-              <Button onClick={() => openAddPhoto("bts")}>
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add BTS {noun}</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                {btsPhotos.length > 1 && (
+                  <ArrangeMenu
+                    items={btsPhotos}
+                    onReorder={store.reorderPhotos}
+                  />
+                )}
+                <Button onClick={() => openAddPhoto("bts")}>
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Add BTS {noun}</span>
+                </Button>
+              </div>
             )}
           </div>
 
@@ -397,6 +415,7 @@ export default function BrandDetailPage() {
                 onEdit={openEditPhoto}
                 onDelete={setDeletingPhoto}
                 onPlay={playVideoItem}
+                onReorder={store.reorderPhotos}
               />
             ))}
         </div>

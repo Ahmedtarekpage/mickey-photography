@@ -1,15 +1,18 @@
 "use client";
 
+import { useRef, useState } from "react";
 import {
   SlidersHorizontal,
   RectangleHorizontal,
   RectangleVertical,
   Play,
   Clock,
+  GripVertical,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { CardMenu } from "@/components/ui/CardMenu";
 import { BeforeAfterSlider } from "@/components/ui/BeforeAfterSlider";
+import { cn } from "@/lib/cn";
 import type { Photo } from "@/lib/types";
 
 export function PhotoGrid({
@@ -17,13 +20,34 @@ export function PhotoGrid({
   onEdit,
   onDelete,
   onPlay,
+  onReorder,
 }: {
   photos: Photo[];
   onEdit: (p: Photo) => void;
   onDelete: (p: Photo) => void;
   /** Called when a video item is clicked (videography). */
   onPlay?: (p: Photo) => void;
+  /** Called with the new id order when cards are dragged to reorder. */
+  onReorder?: (orderedIds: string[]) => void;
 }) {
+  // Drag-and-drop (desktop). A card is only draggable while its grip handle is
+  // held — keeps the menu, play button and before/after slider fully usable.
+  const [grabId, setGrabId] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const dragEndedAt = useRef(0);
+
+  const reorder = (targetId: string) => {
+    if (!dragId || dragId === targetId || !onReorder) return;
+    const ids = photos.map((p) => p.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(targetId);
+    if (from === -1 || to === -1) return;
+    ids.splice(from, 1);
+    ids.splice(to, 0, dragId);
+    onReorder(ids);
+  };
+
   return (
     <div className="columns-1 gap-5 sm:columns-2 lg:columns-3 [&>*]:mb-5">
       {photos.map((p) => {
@@ -32,12 +56,57 @@ export function PhotoGrid({
         return (
           <div
             key={p.id}
-            className="card-3d group relative break-inside-avoid overflow-hidden"
+            draggable={onReorder ? grabId === p.id : undefined}
+            onDragStart={(e) => {
+              setDragId(p.id);
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", p.id);
+            }}
+            onDragOver={(e) => {
+              if (!onReorder) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "move";
+              if (overId !== p.id) setOverId(p.id);
+            }}
+            onDragLeave={() => {
+              if (overId === p.id) setOverId(null);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              reorder(p.id);
+              setDragId(null);
+              setOverId(null);
+              setGrabId(null);
+            }}
+            onDragEnd={() => {
+              setDragId(null);
+              setOverId(null);
+              setGrabId(null);
+              dragEndedAt.current = Date.now();
+            }}
+            className={cn(
+              "card-3d group relative break-inside-avoid overflow-hidden",
+              dragId === p.id && "opacity-40",
+              overId === p.id &&
+                dragId !== p.id &&
+                "ring-2 ring-brand-fuchsia ring-offset-2 ring-offset-ink-900"
+            )}
           >
             <div className="absolute right-3 top-3 z-20">
               <CardMenu onEdit={() => onEdit(p)} onDelete={() => onDelete(p)} />
             </div>
-            <div className="absolute left-3 top-3 z-10 flex gap-1.5">
+            <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
+              {onReorder && (
+                // Drag handle — press and drag to reorder (desktop).
+                <span
+                  onMouseDown={() => setGrabId(p.id)}
+                  onMouseUp={() => setGrabId(null)}
+                  title="Drag to reorder"
+                  className="flex h-7 w-7 cursor-grab items-center justify-center rounded-lg border border-white/10 bg-ink-950/50 text-slate-200 backdrop-blur transition hover:bg-ink-950/80 active:cursor-grabbing"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </span>
+              )}
               <Badge tone={p.orientation === "portrait" ? "cyan" : "violet"}>
                 {p.orientation === "portrait" ? (
                   <RectangleVertical className="h-3 w-3" />
@@ -65,6 +134,7 @@ export function PhotoGrid({
                   <img
                     src={p.url}
                     alt={p.title}
+                    draggable={false}
                     className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                   />
                 ) : (
@@ -90,7 +160,12 @@ export function PhotoGrid({
               />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.url} alt={p.title} className="w-full object-cover" />
+              <img
+                src={p.url}
+                alt={p.title}
+                draggable={false}
+                className="w-full object-cover"
+              />
             )}
 
             <div className="p-4">

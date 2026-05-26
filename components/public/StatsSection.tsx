@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { StatIcon } from "@/lib/statIcons";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import type { Country, Stat } from "@/lib/types";
 
 // Real WebGL globe — load only on the client.
@@ -96,7 +97,11 @@ export function StatsSection({
           {/* RIGHT — interactive 3D earth with flags at real locations */}
           {countries.length > 0 && (
             <div className="flex flex-col items-center">
-              <EarthGlobe countries={countries} />
+              {/* Isolated — if WebGL/three.js fails (old or low-memory devices),
+                  the globe is dropped instead of blanking the page. */}
+              <ErrorBoundary fallback={null}>
+                <EarthGlobe countries={countries} />
+              </ErrorBoundary>
               <p className="mt-3 text-sm text-slate-400">
                 <span className="font-semibold text-white">
                   {countries.length}

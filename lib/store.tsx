@@ -96,6 +96,9 @@ interface StoreContextValue extends DataShape {
   addPhoto: (p: NewPhoto) => Photo;
   updatePhoto: (id: string, patch: Partial<NewPhoto>) => void;
   deletePhoto: (id: string) => void;
+  /** Reorder the given photos (e.g. one brand section) into `orderedIds`,
+   *  leaving any photos not in that set in their existing positions. */
+  reorderPhotos: (orderedIds: string[]) => void;
   // Reels
   addReel: (r: NewReel) => Reel;
   updateReel: (id: string, patch: Partial<NewReel>) => void;
@@ -343,6 +346,20 @@ export function StoreProvider({
     setData((d) => ({ ...d, photos: d.photos.filter((p) => p.id !== id) }));
   }, []);
 
+  const reorderPhotos = useCallback((orderedIds: string[]) => {
+    setData((d) => {
+      const inSet = new Set(orderedIds);
+      const byId = new Map(d.photos.map((p) => [p.id, p]));
+      // Slot the reordered set into the positions it already occupied; photos
+      // in other brands/sections keep their place.
+      let i = 0;
+      const photos = d.photos.map((p) =>
+        inSet.has(p.id) ? byId.get(orderedIds[i++]) ?? p : p
+      );
+      return { ...d, photos };
+    });
+  }, []);
+
   // ---- Reels ----
   const addReel = useCallback((r: NewReel) => {
     const created: Reel = { ...r, id: uid("reel"), createdAt: now() };
@@ -423,6 +440,7 @@ export function StoreProvider({
       addPhoto,
       updatePhoto,
       deletePhoto,
+      reorderPhotos,
       addReel,
       updateReel,
       deleteReel,
@@ -451,6 +469,7 @@ export function StoreProvider({
       addPhoto,
       updatePhoto,
       deletePhoto,
+      reorderPhotos,
       addReel,
       updateReel,
       deleteReel,
